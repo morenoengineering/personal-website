@@ -1,5 +1,5 @@
 # personal-website
-
+note:
 Single-page portfolio for William Moreno — an interactive badge on a lanyard
 (three.js, Verlet rope physics) on the left third, and one full-height panel
 per role on the right, over a procedural map of each work location that
