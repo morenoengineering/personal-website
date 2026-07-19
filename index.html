@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>William Moreno — Autonomous systems, RF &amp; radar, flight software</title>
+<meta name="description" content="Portfolio of William Moreno — software and systems engineer working across autonomous systems, RF & radar simulation, and flight software.">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23111214"/><text x="32" y="42" font-family="sans-serif" font-size="26" font-weight="700" fill="%23ffffff" text-anchor="middle">WM</text></svg>'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:      #FFFFFF;   /* page & content panels */
+    --stage:   #111214;   /* badge rail, near-black flat */
+    --ink:     #15181D;   /* primary text */
+    --soft:    #6B7280;   /* secondary text */
+    --faint:   #A8ADB5;   /* captions */
+    --line:    #E5E7EB;   /* hairlines */
+    --accent:  #3457D5;   /* links, active states, marker, crease */
+    --stage-w: 33.333%;
+    --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+    --body:    "Inter", system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px}
+
+  .skip{
+    position:absolute; left:-9999px; top:0; z-index:100;
+    background:var(--bg); color:var(--ink); padding:.5rem 1rem;
+  }
+  .skip:focus{left:0}
+
+  /* ---------- badge stage (left third) ---------- */
+  .stage{
+    position:fixed; left:0; top:0; bottom:0; width:var(--stage-w);
+    background:var(--stage); z-index:10; overflow:hidden;
+  }
+  .stage canvas{display:block; width:100%; height:100%; touch-action:none; cursor:grab}
+  .stage canvas.dragging{cursor:grabbing}
+  .stage-cap{
+    position:absolute; left:24px; bottom:20px; right:24px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    pointer-events:none;
+  }
+  .stage-cap .org{color:#c9cdd4; font-size:14px; font-weight:500}
+  .stage-cap .num{color:#565b63; font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .hint{
+    position:absolute; left:0; right:0; bottom:52px; text-align:center;
+    color:#7b8089; font-size:13px; pointer-events:none;
+    opacity:0; transition:opacity .8s ease;
+  }
+  .hint.show{opacity:1}
+
+  /* ---------- map layer (behind the right column) ---------- */
+  .map-layer{
+    position:fixed; left:var(--stage-w); right:0; top:0; bottom:0;
+    z-index:0; overflow:hidden; background:var(--bg);
+  }
+  .map-layer > canvas{position:absolute; inset:0; width:100%; height:100%}
+  .map-layer::after{           /* readability wash over the text side */
+    content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
+    background:linear-gradient(90deg,
+      rgba(255,255,255,.93) 0%, rgba(255,255,255,.72) 42%,
+      rgba(255,255,255,.30) 72%, rgba(255,255,255,.12) 100%);
+  }
+  .fold-wrap{
+    position:absolute; inset:0; z-index:2; pointer-events:none;
+    perspective:1500px; perspective-origin:28% 50%;
+  }
+  .fold-3d{position:absolute; inset:0; transform-style:preserve-3d}
+  .fold-seg{
+    position:absolute; top:0; height:100%;
+    transform-origin:left center; transform-style:preserve-3d;
+    backface-visibility:visible;
+  }
+  .fold-seg > canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+  .fold-shade, .fold-back{position:absolute; inset:0; opacity:0}
+  .fold-shade{
+    background:linear-gradient(90deg,
+      rgba(21,24,29,.32) 0%, rgba(52,87,213,.12) 45%, rgba(21,24,29,0) 90%);
+  }
+  .fold-back{background:rgba(255,255,255,.92)}
+
+  /* ---------- right column ---------- */
+  main{position:relative; z-index:1; margin-left:var(--stage-w)}
+  .panel{
+    min-height:100vh; display:flex; align-items:center;
+    padding:96px 9vw 96px 5.5vw; position:relative;
+  }
+  .panel-inner{max-width:660px; width:100%}
+  .meta{
+    color:var(--faint); font-size:14px; margin:0 0 14px;
+    font-variant-numeric:tabular-nums;
+  }
+  .meta .n{color:var(--accent); font-weight:600}
+  h1,h2{font-family:var(--display); letter-spacing:-.01em}
+  h1{font-size:clamp(40px,5.4vw,72px); line-height:1.04; margin:.2em 0 .35em; font-weight:700}
+  h2{font-size:clamp(30px,3.4vw,44px); line-height:1.1; margin:0 0 6px; font-weight:600}
+  .role{color:var(--ink); font-size:18px; font-weight:500; margin:0 0 18px}
+  .summary{color:var(--soft); margin:0 0 26px; max-width:58ch}
+  .thread{margin:0 0 22px}
+  .thread h3{
+    font-family:var(--display); font-size:16.5px; font-weight:600;
+    margin:0 0 8px; color:var(--ink);
+  }
+  .thread ul{margin:0; padding-left:19px; color:var(--soft)}
+  .thread li{margin:0 0 8px; font-size:15px}
+  .thread li::marker{color:var(--faint)}
+  .tags{display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 0; padding:0; list-style:none}
+  .tags li{
+    font-size:12.5px; color:var(--soft); border:1px solid var(--line);
+    border-radius:999px; padding:4px 12px; background:rgba(255,255,255,.6);
+  }
+
+  /* intro */
+  .tagline{color:var(--soft); font-size:17px; margin:0 0 20px}
+  .intro-links{display:flex; gap:22px; margin:26px 0 0; font-size:15px}
+  .scroll-cue{margin-top:56px; color:var(--faint); font-size:13.5px}
+  .scroll-cue::after{content:"↓"; display:inline-block; margin-left:8px; color:var(--accent)}
+
+  /* ---------- video ---------- */
+  .video{margin-top:30px; max-width:600px}
+  .video-frame{
+    position:relative; aspect-ratio:16/9; border-radius:12px; overflow:hidden;
+    border:1px solid var(--line); background:#F3F4F6; width:100%;
+    display:block; padding:0; cursor:pointer;
+  }
+  .video-frame img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+  .video-frame iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+  .play{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:60px; height:60px; border-radius:50%; background:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .18s ease; box-shadow:0 8px 28px rgba(21,24,29,.28);
+  }
+  .video-frame:hover .play{transform:translate(-50%,-50%) scale(1.07)}
+  .play::after{
+    content:""; display:block; margin-left:4px;
+    border-style:solid; border-width:10px 0 10px 17px;
+    border-color:transparent transparent transparent #fff;
+  }
+  .video-ph{
+    aspect-ratio:16/9; border-radius:12px; border:1px dashed #D7DBE1;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--faint); font-size:14px; background:rgba(255,255,255,.55);
+  }
+  .video-cap{color:var(--faint); font-size:13px; margin:10px 2px 0}
+
+  /* ---------- dot rail ---------- */
+  .rail{
+    position:fixed; right:20px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:6px; z-index:20;
+  }
+  .rail button{
+    width:22px; height:22px; padding:0; border:0; background:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+  }
+  .rail button::before{
+    content:""; width:8px; height:8px; border-radius:50%;
+    background:#D3D7DD; transition:background .2s ease, transform .2s ease;
+  }
+  .rail button:hover::before{background:var(--faint)}
+  .rail button.active::before{background:var(--accent); transform:scale(1.3)}
+
+  footer{
+    margin-left:0; padding:34px 9vw 42px 5.5vw;
+    color:var(--faint); font-size:13.5px; position:relative; z-index:1;
+  }
+  footer .sep{margin:0 8px; color:var(--line)}
+
+  /* ---------- narrow screens ---------- */
+  @media (max-width: 900px){
+    :root{--stage-w:0%}
+    .stage{
+      position:sticky; top:0; left:auto; bottom:auto;
+      width:100%; height:min(42vh,380px); z-index:30;
+    }
+    main{margin-left:0}
+    .map-layer{left:0}
+    .map-layer::after{
+      background:linear-gradient(90deg, rgba(255,255,255,.9), rgba(255,255,255,.72));
+    }
+    .rail{display:none}
+    .panel{padding:72px 7vw; min-height:72vh}
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+
+<aside class="stage" aria-label="Badge">
+  <canvas id="badgeCanvas" aria-hidden="true"></canvas>
+  <div class="hint" id="hint">Drag the badge</div>
+  <div class="stage-cap">
+    <span class="org" id="capOrg"></span>
+    <span class="num" id="capNum"></span>
+  </div>
+</aside>
+
+<div class="map-layer" id="mapLayer" aria-hidden="true">
+  <canvas id="mapBase"></canvas>
+</div>
+
+<main id="content"></main>
+
+<nav class="rail" id="rail" aria-label="Jump to a section"></nav>
+
+<footer>
+  <span id="footLinks"></span>
+  <span class="sep">·</span>
+  Static files only — one WebGL context (the badge), CSS-3D map folds.
+</footer>
+
+<noscript>
+  <div style="position:fixed;inset:0;background:#fff;z-index:99;padding:2rem;overflow:auto">
+    <p>This site needs JavaScript for the interactive badge and maps.
+    In the meantime: William Moreno — autonomous systems, RF &amp; radar, and flight software.
+    <a href="https://linkedin.com/in/wjmoreno">linkedin.com/in/wjmoreno</a></p>
+  </div>
+</noscript>
+
+<script src="assets/vendor/three.min.js"></script>
+<script src="content.js"></script>
+<script>
+/* =============================================================
+   Rendering, physics & map code — content lives in content.js.
+   ============================================================= */
+(function(){
+"use strict";
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DPR_MAP   = Math.min(window.devicePixelRatio || 1, 1.5);
+const DPR_STAGE = Math.min(window.devicePixelRatio || 1, 2);
+
+/* ---------- tiny seeded RNG so each map is stable ---------- */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seedFrom(coords){
+  return (Math.round(coords[0] * 1000) * 73856093) ^ (Math.round(coords[1] * 1000) * 19349663);
+}
+
+/* =============================================================
+   Procedural location map (Canvas 2D) — stylized, not tiles.
+   Swap this function for static Mapbox/MapTiler image URLs or
+   pre-rendered PNGs if real maps are wanted later; the fold
+   machinery below is unchanged.
+   ============================================================= */
+function mapCanvasFor(org, W, H){
+  const c = document.createElement("canvas");
+  c.width = Math.max(2, Math.round(W * DPR_MAP));
+  c.height = Math.max(2, Math.round(H * DPR_MAP));
+  const x = c.getContext("2d");
+  x.scale(DPR_MAP, DPR_MAP);
+  const rnd = mulberry32(seedFrom(org.coords));
+
+  x.fillStyle = "#FFFFFF";
+  x.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const diag = Math.hypot(W, H);
+  const theta = (rnd() - 0.5) * 0.9;           // grid rotation
+  const minor = 40 + rnd() * 26;               // block size
+  const majorEvery = 3 + Math.floor(rnd() * 3);
+
+  /* river — a light band wandering across, under the streets */
+  x.save();
+  const vertical = rnd() > 0.5;
+  const amp = 40 + rnd() * 90, ph = rnd() * Math.PI * 2;
+  const off = (rnd() - 0.5) * (vertical ? W : H) * 0.6;
+  x.beginPath();
+  const steps = 60;
+  for (let i = 0; i <= steps; i++){
+    const t = i / steps;
+    const along = t * (vertical ? H : W);
+    const across = (vertical ? cx : cy) + off +
+      Math.sin(ph + t * (2.5 + rnd() * 0.02)) * amp;
+    const px = vertical ? across : along;
+    const py = vertical ? along : across;
+    if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
+  }
+  x.strokeStyle = "#E3E9F4";
+  x.lineWidth = 22 + rnd() * 14;
+  x.lineCap = "round"; x.lineJoin = "round";
+  x.stroke();
+  x.restore();
+
+  /* street grid — two rotated line families, thin light gray */
+  x.save();
+  x.translate(cx, cy); x.rotate(theta);
+  for (const dir of [0, Math.PI / 2]){
+    x.save(); x.rotate(dir);
+    const n = Math.ceil(diag / minor);
+    for (let i = -n; i <= n; i++){
+      const major = (i % majorEvery) === 0;
+      if (!major && rnd() < 0.08) continue;    // drop a lane here and there
+      x.beginPath();
+      x.moveTo(i * minor, -diag); x.lineTo(i * minor, diag);
+      x.strokeStyle = major ? "#D9DDE3" : "#E7EAEE";
+      x.lineWidth = major ? 1.6 : 1;
+      x.stroke();
+    }
+    x.restore();
+  }
+  /* one diagonal boulevard */
+  x.beginPath();
+  const bAng = (rnd() - 0.5) * 1.2 + Math.PI / 4;
+  x.moveTo(-Math.cos(bAng) * diag, -Math.sin(bAng) * diag);
+  x.lineTo(Math.cos(bAng) * diag, Math.sin(bAng) * diag);
+  x.strokeStyle = "#D9DDE3"; x.lineWidth = 1.6; x.stroke();
+  x.restore();
+
+  /* site marker — the one accent on the map */
+  const mx = cx + (rnd() - 0.5) * W * 0.22;
+  const my = cy + (rnd() - 0.5) * H * 0.22;
+  x.beginPath(); x.arc(mx, my, 11, 0, Math.PI * 2);
+  x.strokeStyle = "rgba(52,87,213,.35)"; x.lineWidth = 1.5; x.stroke();
+  x.beginPath(); x.arc(mx, my, 4.5, 0, Math.PI * 2);
+  x.fillStyle = "#3457D5"; x.fill();
+
+  /* label — place + coordinates */
+  const lat = org.coords[0], lng = org.coords[1];
+  const coordTxt =
+    Math.abs(lat).toFixed(3) + "° " + (lat >= 0 ? "N" : "S") + "   " +
+    Math.abs(lng).toFixed(3) + "° " + (lng >= 0 ? "E" : "W");
+  x.fillStyle = "#6B7280";
+  x.font = "500 13px Inter, sans-serif";
+  x.fillText(org.place, 26, H - 46);
+  x.fillStyle = "#A8ADB5";
+  x.font = "12px Inter, sans-serif";
+  x.fillText(coordTxt, 26, H - 26);
+
+  return c;
+}
+
+/* =============================================================
+   Paper-fold transition (CSS 3D, no second WebGL context).
+   The incoming map is sliced into six strips in a nested hinge
+   chain; it unfolds strip by strip over the still-flat previous
+   map, then bakes into the flat base.
+   ============================================================= */
+const mapLayer = document.getElementById("mapLayer");
+const mapBase  = document.getElementById("mapBase");
+let mapW = 0, mapH = 0, currentMapIdx = -1;
+let foldWrap = null, foldRAF = 0, pendingMap = null;
+
+function sizeMapBase(){
+  mapW = mapLayer.clientWidth; mapH = mapLayer.clientHeight;
+  mapBase.width = Math.max(2, Math.round(mapW * DPR_MAP));
+  mapBase.height = Math.max(2, Math.round(mapH * DPR_MAP));
+}
+function bake(src){
+  mapBase.getContext("2d").drawImage(src, 0, 0, mapBase.width, mapBase.height);
+}
+function cancelFold(){
+  if (foldRAF) cancelAnimationFrame(foldRAF); foldRAF = 0;
+  if (foldWrap){ if (pendingMap) bake(pendingMap); foldWrap.remove(); foldWrap = null; pendingMap = null; }
+}
+function easeOutBack(p){
+  const s = 1.35;
+  return 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+}
+function foldTo(idx){
+  if (idx === currentMapIdx) return;
+  currentMapIdx = idx;
+  const org = ORGS[idx];
+  cancelFold();
+  const next = mapCanvasFor(org, mapW, mapH);
+  if (reduced || mapW < 4){ bake(next); return; }
+
+  pendingMap = next;
+  const N = 6, w = mapW / N;
+  foldWrap = document.createElement("div");
+  foldWrap.className = "fold-wrap";
+  const root3d = document.createElement("div");
+  root3d.className = "fold-3d";
+  foldWrap.appendChild(root3d);
+
+  const segs = [];
+  let parent = root3d;
+  const sliceW = Math.ceil(w * DPR_MAP) + 1;   // 1px overlap kills seams
+  for (let i = 0; i < N; i++){
+    const seg = document.createElement("div");
+    seg.className = "fold-seg";
+    seg.style.width = w + "px";
+    seg.style.left = (i === 0 ? 0 : w) + "px";
+    const sc = document.createElement("canvas");
+    sc.width = sliceW; sc.height = next.height;
+    sc.getContext("2d").drawImage(next,
+      Math.round(i * w * DPR_MAP), 0, sliceW, next.height,
+      0, 0, sliceW, next.height);
+    const shade = document.createElement("div"); shade.className = "fold-shade";
+    const back  = document.createElement("div"); back.className  = "fold-back";
+    seg.appendChild(sc); seg.appendChild(shade); seg.appendChild(back);
+    parent.appendChild(seg);
+    segs.push({ seg, shade, back });
+    parent = seg;
+  }
+
+  mapLayer.appendChild(foldWrap);
+
+  const stagger = 90, dur = 690;               // ≈1.05 s total
+  const t0 = performance.now();
+  function frame(now){
+    let done = true;
+    for (let i = 1; i < N; i++){
+      const p = Math.min(Math.max((now - t0 - (i - 1) * stagger) / dur, 0), 1);
+      if (p < 1) done = false;
+      const a = 179.2 * (1 - easeOutBack(p));  // 179.2° folded → 0° flat (slight overshoot past flat)
+      segs[i].seg.style.transform = "rotateY(" + a + "deg) translateZ(0.35px)";
+      const abs = Math.min(Math.max(a, 0), 180);
+      segs[i].shade.style.opacity = (Math.sin(abs / 180 * Math.PI) * 0.85).toFixed(3);
+      segs[i].back.style.opacity  = Math.min(Math.max((abs - 90) / 45, 0), 1).toFixed(3);
+    }
+    if (done){ cancelFold(); }
+    else foldRAF = requestAnimationFrame(frame);
+  }
+  foldRAF = requestAnimationFrame(frame);
+}
+
+/* =============================================================
+   Badge textures (Canvas 2D) — a plain card: thin accent rule,
+   monogram, name, role, and a large faint numeral. Placeholders;
+   real scans can drop into the same slot later.
+   ============================================================= */
+function roundRect(x, r0, y0, w, h, r){
+  x.beginPath();
+  x.moveTo(r0 + r, y0);
+  x.arcTo(r0 + w, y0, r0 + w, y0 + h, r);
+  x.arcTo(r0 + w, y0 + h, r0, y0 + h, r);
+  x.arcTo(r0, y0 + h, r0, y0, r);
+  x.arcTo(r0, y0, r0 + w, y0, r);
+  x.closePath();
+}
+function monogramOf(org){
+  const stop = new Set(["of", "the", "and", "at", "for"]);
+  const words = org.replace(/[^A-Za-z ]/g, "").split(/\s+/)
+    .filter(w => w && !stop.has(w.toLowerCase()));
+  if (words[0] && words[0].length <= 3 && words[0] === words[0].toUpperCase())
+    return words[0];                       // acronym first word, e.g. "GE"
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join("");
+}
+function wrapText(x, text, maxW){
+  const out = []; let line = "";
+  for (const word of text.split(" ")){
+    const t = line ? line + " " + word : word;
+    if (x.measureText(t).width > maxW && line){ out.push(line); line = word; }
+    else line = t;
+  }
+  if (line) out.push(line);
+  return out;
+}
+function badgeCardCanvas(org, mirrored){
+  const W = 512, H = 717, R = 34;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  if (mirrored){ x.translate(W, 0); x.scale(-1, 1); }
+
+  roundRect(x, 0.5, 0.5, W - 1, H - 1, R);
+  x.fillStyle = "#FFFFFF"; x.fill();
+  x.strokeStyle = "#E3E5E9"; x.lineWidth = 1; x.stroke();
+  x.save(); roundRect(x, 0, 0, W, H, R); x.clip();
+
+  /* lanyard slot */
+  roundRect(x, W / 2 - 55, 30, 110, 15, 7.5);
+  x.fillStyle = "#DFE2E7"; x.fill();
+
+  /* large faint numeral — the one graphic flourish */
+  x.fillStyle = "rgba(21,24,29,.055)";
+  x.font = "700 340px 'Space Grotesk', sans-serif";
+  x.textAlign = "right"; x.textBaseline = "alphabetic";
+  x.fillText(org ? org.no : "WM", W - 18, H - 30);
+  x.textAlign = "left";
+
+  /* thin accent rule */
+  x.fillStyle = "#3457D5";
+  x.fillRect(46, 104, 60, 5);
+
+  if (org){
+    x.fillStyle = "#15181D";
+    x.font = "700 40px 'Space Grotesk', sans-serif";
+    x.fillText(monogramOf(org.org), 46, 176);
+
+    x.font = "600 47px 'Space Grotesk', sans-serif";
+    x.fillText("William", 46, 356);
+    x.fillText("Moreno", 46, 410);
+
+    x.fillStyle = "#6B7280";
+    x.font = "500 22px Inter, sans-serif";
+    let y = 470;
+    for (const ln of wrapText(x, org.role, 330)){ x.fillText(ln, 46, y); y += 30; }
+
+    x.fillStyle = "#A8ADB5";
+    x.font = "500 19px Inter, sans-serif";
+    y = H - 64;
+    for (const ln of wrapText(x, org.org, 340)){ x.fillText(ln, 46, y); y += 25; }
+  } else {
+    /* card back */
+    x.fillStyle = "#15181D";
+    x.font = "700 40px 'Space Grotesk', sans-serif";
+    x.fillText("WM", 46, 176);
+    x.fillStyle = "#A8ADB5";
+    x.font = "500 19px Inter, sans-serif";
+    x.fillText("william moreno", 46, H - 52);
+  }
+  x.restore();
+  return c;
+}
+
+/* =============================================================
+   The badge — three.js r128, one WebGL context on the page.
+   A Verlet rope drives the lanyard; the badge is a rigid
+   four-corner quad constrained to the rope end.
+   ============================================================= */
+const stageCanvas = document.getElementById("badgeCanvas");
+const capOrg = document.getElementById("capOrg");
+const capNum = document.getElementById("capNum");
+
+const BW = 1.5, BH = 2.1;                       // badge size, world units
+const ROPE_N = 9, SEG = 0.21, ANCHOR = new THREE.Vector3(0, 3.55, 0);
+const GRAV = -30, DAMP = reduced ? 0.90 : 0.988, ITER = 14;
+
+const renderer = new THREE.WebGLRenderer({ canvas: stageCanvas, antialias: true, alpha: false });
+renderer.setClearColor(0x111214, 1);
+renderer.setPixelRatio(DPR_STAGE);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+camera.position.set(0, 0.4, 7.2);
+camera.lookAt(0, 0.4, 0);
+
+/* particles: rope 0..ROPE_N-1, then TL TR BL BR */
+const P = [], PREV = [], PIN = [];
+function addP(x, y, z){ P.push(new THREE.Vector3(x, y, z)); PREV.push(new THREE.Vector3(x, y, z)); PIN.push(false); }
+(function initParticles(){
+  for (let i = 0; i < ROPE_N; i++) addP(ANCHOR.x, ANCHOR.y - i * SEG, 0);
+  const topY = ANCHOR.y - (ROPE_N - 1) * SEG - 0.13;
+  addP(-BW / 2, topY, 0.001); addP(BW / 2, topY, -0.001);          // TL TR
+  addP(-BW / 2, topY - BH, 0.002); addP(BW / 2, topY - BH, 0);     // BL BR
+  PIN[0] = true;
+  if (!reduced){                       // entry: badge drops in and settles
+    for (let i = 1; i < P.length; i++){
+      P[i].y += 1.9; P[i].x -= 0.55; PREV[i].copy(P[i]); PREV[i].x += 0.03;
+    }
+  }
+})();
+const iTL = ROPE_N, iTR = ROPE_N + 1, iBL = ROPE_N + 2, iBR = ROPE_N + 3;
+const CON = [];
+for (let i = 0; i < ROPE_N - 1; i++) CON.push([i, i + 1, SEG]);
+const strap = Math.hypot(BW / 2, 0.13);
+CON.push([ROPE_N - 1, iTL, strap], [ROPE_N - 1, iTR, strap]);
+const diag = Math.hypot(BW, BH);
+CON.push([iTL, iTR, BW], [iBL, iBR, BW], [iTL, iBL, BH], [iTR, iBR, BH], [iTL, iBR, diag], [iTR, iBL, diag]);
+
+function physicsStep(dt){
+  const g = GRAV * dt * dt;
+  for (let i = 0; i < P.length; i++){
+    if (PIN[i]) continue;
+    const p = P[i], q = PREV[i];
+    const vx = (p.x - q.x) * DAMP, vy = (p.y - q.y) * DAMP, vz = (p.z - q.z) * DAMP;
+    q.copy(p);
+    p.x += vx; p.y += vy + g; p.z += vz;
+    p.z *= 0.99;                                  // keep it near the stage plane
+  }
+  P[0].copy(ANCHOR);
+  if (drag.on){                                   // follow the pointer
+    const cx = (P[iTL].x + P[iTR].x + P[iBL].x + P[iBR].x) / 4;
+    const cy = (P[iTL].y + P[iTR].y + P[iBL].y + P[iBR].y) / 4;
+    let dx = drag.target.x - drag.off.x - cx;
+    let dy = drag.target.y - drag.off.y - cy;
+    const m = Math.hypot(dx, dy);
+    if (m > 0.5){ dx *= 0.5 / m; dy *= 0.5 / m; }
+    for (const i of [iTL, iTR, iBL, iBR]){ P[i].x += dx; P[i].y += dy; }
+  }
+  for (let k = 0; k < ITER; k++){
+    for (const [a, b, rest] of CON){
+      const pa = P[a], pb = P[b];
+      let dx = pb.x - pa.x, dy = pb.y - pa.y, dz = pb.z - pa.z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
+      const diff = (d - rest) / d * 0.5;
+      dx *= diff; dy *= diff; dz *= diff;
+      if (!PIN[a]){ pa.x += dx; pa.y += dy; pa.z += dz; }
+      if (!PIN[b]){ pb.x -= dx; pb.y -= dy; pb.z -= dz; }
+    }
+    P[0].copy(ANCHOR);
+  }
+}
+
+/* badge mesh — front & back share the quad geometry */
+const badgeGeom = new THREE.BufferGeometry();
+badgeGeom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(12), 3));
+badgeGeom.setAttribute("uv", new THREE.BufferAttribute(new Float32Array([0,1, 1,1, 0,0, 1,0]), 2));
+badgeGeom.setIndex([0, 2, 1, 1, 2, 3]);
+function texFrom(canvas){
+  const t = new THREE.CanvasTexture(canvas);
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+let cardTex = ORGS.map(o => texFrom(badgeCardCanvas(o, false)));
+let backTex = texFrom(badgeCardCanvas(null, true));
+const frontMat = new THREE.MeshBasicMaterial({ map: cardTex[0], transparent: true, side: THREE.FrontSide });
+const backMat  = new THREE.MeshBasicMaterial({ map: backTex,   transparent: true, side: THREE.BackSide });
+const badgeMesh = new THREE.Mesh(badgeGeom, frontMat);
+const badgeBack = new THREE.Mesh(badgeGeom, backMat);
+scene.add(badgeMesh); scene.add(badgeBack);
+
+/* lanyard ribbon + the two short straps to the badge corners */
+const ribbonQuads = (ROPE_N - 1) + 2;
+const ribbonGeom = new THREE.BufferGeometry();
+ribbonGeom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ribbonQuads * 4 * 3), 3));
+const rIdx = [];
+for (let q = 0; q < ribbonQuads; q++){
+  const b = q * 4;
+  rIdx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+}
+ribbonGeom.setIndex(rIdx);
+const ribbonMat = new THREE.MeshBasicMaterial({ color: 0x41464f, side: THREE.DoubleSide });
+const ribbonMesh = new THREE.Mesh(ribbonGeom, ribbonMat);
+ribbonMesh.frustumCulled = false;
+scene.add(ribbonMesh);
+
+function setQuad(arr, q, ax, ay, az, bx, by, bz, hw){
+  let dx = bx - ax, dy = by - ay;
+  const m = Math.hypot(dx, dy) || 1e-6;
+  const nx = -dy / m * hw, ny = dx / m * hw;
+  const b = q * 12;
+  arr[b]     = ax + nx; arr[b + 1] = ay + ny; arr[b + 2]  = az;
+  arr[b + 3] = ax - nx; arr[b + 4] = ay - ny; arr[b + 5]  = az;
+  arr[b + 6] = bx + nx; arr[b + 7] = by + ny; arr[b + 8]  = bz;
+  arr[b + 9] = bx - nx; arr[b + 10] = by - ny; arr[b + 11] = bz;
+}
+function syncMeshes(){
+  const bp = badgeGeom.attributes.position.array;
+  const order = [iTL, iTR, iBL, iBR];
+  for (let i = 0; i < 4; i++){
+    bp[i * 3] = P[order[i]].x; bp[i * 3 + 1] = P[order[i]].y; bp[i * 3 + 2] = P[order[i]].z;
+  }
+  badgeGeom.attributes.position.needsUpdate = true;
+  badgeGeom.computeBoundingSphere();
+
+  const rp = ribbonGeom.attributes.position.array;
+  for (let i = 0; i < ROPE_N - 1; i++)
+    setQuad(rp, i, P[i].x, P[i].y, P[i].z, P[i + 1].x, P[i + 1].y, P[i + 1].z, 0.045);
+  const e = ROPE_N - 1;
+  setQuad(rp, e,     P[e].x, P[e].y, P[e].z, P[iTL].x + 0.07, P[iTL].y - 0.03, P[iTL].z, 0.028);
+  setQuad(rp, e + 1, P[e].x, P[e].y, P[e].z, P[iTR].x - 0.07, P[iTR].y - 0.03, P[iTR].z, 0.028);
+  ribbonGeom.attributes.position.needsUpdate = true;
+}
+
+/* pointer drag — grab the badge, throw it with momentum */
+const raycaster = new THREE.Raycaster();
+const drag = { on: false, target: new THREE.Vector3(), off: new THREE.Vector3() };
+const hintEl = document.getElementById("hint");
+const store = (get, v) => {
+  try { return get ? localStorage.getItem("badgeHintSeen") : localStorage.setItem("badgeHintSeen", v); }
+  catch (e) { return null; }
+};
+if (!store(true)) setTimeout(() => hintEl.classList.add("show"), 1200);
+
+function pointerWorld(ev){
+  const r = stageCanvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((ev.clientX - r.left) / r.width) * 2 - 1,
+    -((ev.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const o = raycaster.ray.origin, d = raycaster.ray.direction;
+  const t = -o.z / d.z;
+  return new THREE.Vector3(o.x + d.x * t, o.y + d.y * t, 0);
+}
+stageCanvas.addEventListener("pointerdown", ev => {
+  const r = stageCanvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((ev.clientX - r.left) / r.width) * 2 - 1,
+    -((ev.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(badgeMesh).length === 0 &&
+      raycaster.intersectObject(badgeBack).length === 0) return;
+  const w = pointerWorld(ev);
+  const cx = (P[iTL].x + P[iTR].x + P[iBL].x + P[iBR].x) / 4;
+  const cy = (P[iTL].y + P[iTR].y + P[iBL].y + P[iBR].y) / 4;
+  drag.on = true;
+  drag.off.set(w.x - cx, w.y - cy, 0);
+  drag.target.copy(w);
+  stageCanvas.classList.add("dragging");
+  stageCanvas.setPointerCapture(ev.pointerId);
+  hintEl.classList.remove("show");
+  store(false, "1");
+});
+stageCanvas.addEventListener("pointermove", ev => {
+  if (drag.on) drag.target.copy(pointerWorld(ev));
+});
+function endDrag(){ drag.on = false; stageCanvas.classList.remove("dragging"); }
+stageCanvas.addEventListener("pointerup", endDrag);
+stageCanvas.addEventListener("pointercancel", endDrag);
+
+/* badge swap — quick fade, texture change, a small flick */
+let swap = null;
+function setBadge(idx){
+  if (frontMat.map === cardTex[idx]) return;
+  swap = { t0: performance.now(), idx, done: false };
+}
+function tickSwap(now){
+  if (!swap) return;
+  const p = (now - swap.t0) / 240;
+  if (p >= 1){ frontMat.opacity = backMat.opacity = 1; swap = null; return; }
+  if (p >= 0.5 && !swap.done){
+    swap.done = true;
+    frontMat.map = cardTex[swap.idx]; frontMat.needsUpdate = true;
+    if (!reduced) for (const i of [iBL, iBR]){ PREV[i].x += 0.05; PREV[i].z += 0.06; }
+  }
+  const o = p < 0.5 ? 1 - p * 2 : (p - 0.5) * 2;
+  frontMat.opacity = backMat.opacity = 0.15 + 0.85 * o;
+}
+
+function sizeStage(){
+  const w = stageCanvas.clientWidth, h = stageCanvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+let last = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const frames = Math.min(3, Math.max(1, Math.round((now - last) / 16.7)));
+  last = now;
+  for (let s = 0; s < frames; s++) physicsStep(1 / 60);
+  tickSwap(now);
+  syncMeshes();
+  renderer.render(scene, camera);
+}
+
+/* =============================================================
+   Build the right column from ORGS + PROFILE.
+   ============================================================= */
+const main = document.getElementById("content");
+const rail = document.getElementById("rail");
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+function videoBlock(o){
+  const wrap = el("div", "video");
+  if (o.videoId){
+    const btn = el("button", "video-frame");
+    btn.setAttribute("aria-label", "Play video — " + o.videoLabel);
+    const img = document.createElement("img");
+    img.src = "https://i.ytimg.com/vi/" + o.videoId + "/hqdefault.jpg";
+    img.alt = ""; img.loading = "lazy";
+    btn.appendChild(img);
+    btn.appendChild(el("span", "play"));
+    btn.addEventListener("click", () => {
+      const f = document.createElement("iframe");
+      f.src = "https://www.youtube-nocookie.com/embed/" + o.videoId + "?autoplay=1&rel=0";
+      f.allow = "autoplay; encrypted-media; picture-in-picture";
+      f.allowFullscreen = true;
+      f.title = o.videoLabel || "Video";
+      btn.replaceChildren(f);
+      btn.style.cursor = "default";
+    }, { once: true });
+    wrap.appendChild(btn);
+    wrap.appendChild(el("p", "video-cap", esc(o.videoLabel)));
+  } else {
+    wrap.appendChild(el("div", "video-ph", "Demo clip coming soon"));
+  }
+  return wrap;
+}
+
+/* intro */
+const intro = el("section", "panel");
+intro.id = "top"; intro.dataset.index = "-1";
+const introInner = el("div", "panel-inner");
+introInner.appendChild(el("h1", null, esc(PROFILE.name)));
+introInner.appendChild(el("p", "tagline", esc(PROFILE.tagline)));
+introInner.appendChild(el("p", "summary", esc(PROFILE.intro)));
+const links = el("div", "intro-links");
+for (const l of PROFILE.links){
+  const a = el("a", null, esc(l.label));
+  a.href = l.href;
+  if (l.href.startsWith("http")){ a.target = "_blank"; a.rel = "noopener"; }
+  links.appendChild(a);
+}
+introInner.appendChild(links);
+introInner.appendChild(el("p", "scroll-cue", "Five stops, five badges — scroll"));
+intro.appendChild(introInner);
+main.appendChild(intro);
+
+/* one panel per entry */
+ORGS.forEach((o, i) => {
+  const sec = el("section", "panel");
+  sec.id = o.id; sec.dataset.index = String(i);
+  const inner = el("div", "panel-inner");
+  inner.appendChild(el("p", "meta",
+    '<span class="n">' + esc(o.no) + "</span> — " + esc(o.dates) + " · " + esc(o.loc)));
+  inner.appendChild(el("h2", null, esc(o.org)));
+  inner.appendChild(el("p", "role", esc(o.role)));
+  inner.appendChild(el("p", "summary", esc(o.summary)));
+  for (const t of (o.threads || [])){
+    const th = el("div", "thread");
+    th.appendChild(el("h3", null, esc(t.name)));
+    const ul = el("ul");
+    for (const b of t.bullets) ul.appendChild(el("li", null, esc(b)));
+    th.appendChild(ul);
+    sec.dataset.hasThreads = "1";
+    inner.appendChild(th);
+  }
+  if (o.tags && o.tags.length){
+    const ul = el("ul", "tags");
+    for (const t of o.tags) ul.appendChild(el("li", null, esc(t)));
+    inner.appendChild(ul);
+  }
+  inner.appendChild(videoBlock(o));
+  sec.appendChild(inner);
+  main.appendChild(sec);
+});
+
+/* footer links */
+document.getElementById("footLinks").innerHTML = PROFILE.links
+  .map(l => '<a href="' + l.href + '"' +
+    (l.href.startsWith("http") ? ' target="_blank" rel="noopener"' : "") + ">" +
+    esc(l.label) + "</a>").join('<span class="sep">·</span>');
+
+/* dot rail — intro + one per entry */
+const railTargets = [intro, ...ORGS.map(o => document.getElementById(o.id))];
+const railLabels = ["Introduction", ...ORGS.map(o => o.org)];
+railTargets.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.setAttribute("aria-label", railLabels[i]);
+  b.title = railLabels[i];
+  b.addEventListener("click", () =>
+    t.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" }));
+  rail.appendChild(b);
+});
+
+/* active section drives badge, caption, map & dots */
+let active = -2;
+function setActive(i){
+  if (i === active) return;
+  active = i;
+  const badgeIdx = Math.max(i, 0);       // intro shows the first card as a stand-in
+  setBadge(badgeIdx);
+  foldTo(badgeIdx);
+  capOrg.textContent = i < 0 ? PROFILE.name : ORGS[i].org;
+  capNum.textContent = i < 0 ? "Overview" : ORGS[i].no + " / " +
+    String(ORGS.length).padStart(2, "0");
+  rail.querySelectorAll("button").forEach((b, k) =>
+    b.classList.toggle("active", k === i + 1));
+}
+const io = new IntersectionObserver(entries => {
+  let best = null;
+  for (const e of entries)
+    if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
+  if (best) setActive(parseInt(best.target.dataset.index, 10));
+}, { threshold: [0.4, 0.6] });
+document.querySelectorAll(".panel").forEach(s => io.observe(s));
+
+/* ---------- boot ---------- */
+function sizeAll(){
+  sizeMapBase(); sizeStage();
+  if (currentMapIdx >= 0){
+    cancelFold();
+    bake(mapCanvasFor(ORGS[currentMapIdx], mapW, mapH));
+  }
+}
+window.addEventListener("resize", (() => {
+  let t; return () => { clearTimeout(t); t = setTimeout(sizeAll, 150); };
+})());
+
+sizeAll();
+setActive(-1);
+requestAnimationFrame(loop);
+
+/* redraw canvas text once webfonts are in */
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => {
+    ORGS.forEach((o, i) => {
+      cardTex[i].image = badgeCardCanvas(o, false);
+      cardTex[i].needsUpdate = true;
+    });
+    backTex.image = badgeCardCanvas(null, true);
+    backTex.needsUpdate = true;
+    frontMat.map = cardTex[Math.max(active, 0)];
+    if (currentMapIdx >= 0){ cancelFold(); bake(mapCanvasFor(ORGS[currentMapIdx], mapW, mapH)); }
+  });
+}
+})();
+</script>
+</body>
+</html>
