@@ -66,7 +66,14 @@
     position:fixed; left:var(--stage-w); right:0; top:0; bottom:0;
     z-index:0; overflow:hidden; background:var(--bg);
   }
-  .map-layer > canvas{position:absolute; inset:0; width:100%; height:100%}
+  .map-svg{position:absolute; inset:0}
+  .map-svg svg{display:block; width:100%; height:100%}
+  .map-cap{
+    position:absolute; left:26px; bottom:22px; z-index:2; opacity:0;
+    display:flex; flex-direction:column; gap:2px; pointer-events:none;
+  }
+  #mapCapPlace{color:#6B7280; font-size:13px; font-weight:500}
+  #mapCapCoords{color:#A8ADB5; font-size:12px; font-variant-numeric:tabular-nums}
   .map-layer::after{           /* readability wash over the text side */
     content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
     background:linear-gradient(90deg,
@@ -191,7 +198,9 @@
 </aside>
 
 <div class="map-layer" id="mapLayer" aria-hidden="true">
-  <canvas id="mapBase"></canvas>
+  <div class="map-cap" id="mapCap">
+    <span id="mapCapPlace"></span><span id="mapCapCoords"></span>
+  </div>
 </div>
 
 <main id="content"></main>
@@ -215,7 +224,6 @@
 
 <script src="assets/vendor/three.min.js"></script>
 <script src="content.js"></script>
-<script src="mapdata.js"></script>
 <script>
 /* =============================================================
    Rendering, physics & map code — content lives in content.js.
@@ -224,231 +232,149 @@
 "use strict";
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const DPR_MAP   = Math.min(window.devicePixelRatio || 1, 1.5);
 const DPR_STAGE = Math.min(window.devicePixelRatio || 1, 2);
 
 /* =============================================================
-   Real-geography location maps (Canvas 2D) — feature data in
-   mapdata.js. Every feature is a stroked path with a measured
-   length; a map appears by tracing its strokes in (water, then
-   parks, campuses, highways, roads, rail), and leaves by tracing
-   them back out while the next map traces up over it.
+   Location maps â layered SVGs in assets/maps/<id>.svg, built by
+   tools/fetch-maps.mjs from OpenStreetMap data. Every stroked
+   path is traced in with the stroke-dashoffset technique,
+   staggered by layer (water → parks → campuses → highways →
+   roads → rail); area fills and labels fade in behind their
+   strokes. Leaving a section traces the old map back out while
+   the new one traces up over it.
    ============================================================= */
 const mapLayer = document.getElementById("mapLayer");
-const mapBase  = document.getElementById("mapBase");
-const mapCtx   = mapBase.getContext("2d");
-let mapW = 0, mapH = 0, currentMapIdx = -1;
+const mapCap = document.getElementById("mapCap");
+const mapCapPlace = document.getElementById("mapCapPlace");
+const mapCapCoords = document.getElementById("mapCapCoords");
+let currentMapIdx = -1;
 
-const KIND_STYLE = {
-  water:   { stroke:"#C4D5EE", label:"#8FA3C8", order:0, w:8, italic:true },
-  park:    { stroke:"#B9D0B3", fill:"rgba(179,207,171,.20)", label:"#8CA886", order:1, w:2 },
-  campus:  { stroke:"#B9C2DC", fill:"rgba(52,87,213,.055)",  label:"#7A828F", order:2, w:2 },
-  highway: { stroke:"#B9BFC9", label:"#9AA1AB", order:3, w:4 },
-  road:    { stroke:"#D2D7DE", label:"#A8ADB5", order:4, w:2.5 },
-  rail:    { stroke:"#C9CED6", label:"#A8ADB5", order:5, w:1.5, dash:[6,5] }
-};
-const GROUP_DELAY = [0, 0.10, 0.16, 0.24, 0.33, 0.45];  // trace start per kind
-const FEATURE_DUR = 0.38;                               // each stroke's share of the timeline
-
-function sizeMapBase(){
-  mapW = mapLayer.clientWidth; mapH = mapLayer.clientHeight;
-  mapBase.width = Math.max(2, Math.round(mapW * DPR_MAP));
-  mapBase.height = Math.max(2, Math.round(mapH * DPR_MAP));
-}
-
-/* Catmull-Rom through the sparse control points → dense polyline */
-function smoothPath(pts, closed){
-  const n = pts.length;
-  if (n < 3) return pts.map(p => p.slice());
-  const at = i => pts[closed ? ((i % n) + n) % n : Math.min(Math.max(i, 0), n - 1)];
-  const out = [];
-  const segs = closed ? n : n - 1;
-  for (let i = 0; i < segs; i++){
-    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
-    const steps = Math.min(28, Math.max(3, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 7)));
-    for (let s = 0; s < steps; s++){
-      const t = s / steps, t2 = t * t, t3 = t2 * t;
-      out.push([
-        0.5 * (2 * p1[0] + (p2[0] - p0[0]) * t +
-          (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 +
-          (3 * p1[0] - p0[0] - 3 * p2[0] + p3[0]) * t3),
-        0.5 * (2 * p1[1] + (p2[1] - p0[1]) * t +
-          (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 +
-          (3 * p1[1] - p0[1] - 3 * p2[1] + p3[1]) * t3)
-      ]);
-    }
-  }
-  out.push(closed ? out[0].slice() : pts[n - 1].slice());
-  return out;
-}
-
-/* Project one org's features to pixel space & measure the strokes. */
-function prepareMap(idx, W, H){
-  const org = ORGS[idx];
-  const data = MAPDATA[org.id] || { features: [] };
-  const c = data.center || org.coords;
-  const pxKm = Math.min(W, H) / (data.span || 14);
-  const kmLat = 110.574, kmLng = 111.32 * Math.cos(c[0] * Math.PI / 180);
-  const proj = (lat, lng) => [
-    W / 2 + (lng - c[1]) * kmLng * pxKm,
-    H / 2 - (lat - c[0]) * kmLat * pxKm
-  ];
-
-  const groupCount = {};
-  const features = (data.features || []).map(f => {
-    const st = KIND_STYLE[f.kind] || KIND_STYLE.road;
-    const closed = f.kind === "park" || f.kind === "campus";
-    const dense = smoothPath(f.pts.map(p => proj(p[0], p[1])), closed);
-    const cum = [0];
-    for (let i = 1; i < dense.length; i++)
-      cum.push(cum[i - 1] + Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]));
-    const k = groupCount[st.order] = (groupCount[st.order] || 0) + 1;
-    let label = null;
-    if (f.name){
-      if (closed){
-        let sx = 0, sy = 0;
-        for (const p of f.pts){ const q = proj(p[0], p[1]); sx += q[0]; sy += q[1]; }
-        label = [sx / f.pts.length, sy / f.pts.length];
-      } else {
-        const at = cum[cum.length - 1] * (f.labelAt || 0.52);
-        let j = 1; while (j < cum.length - 1 && cum[j] < at) j++;
-        label = [dense[j][0], dense[j][1] - 8];
-      }
-    }
-    return {
-      kind: f.kind, name: f.name, style: st, closed, dense, cum,
-      len: cum[cum.length - 1], w: f.w || st.w,
-      delay: GROUP_DELAY[st.order] + (k - 1) * 0.05, label
-    };
-  });
-
-  return { org, features, marker: proj(org.coords[0], org.coords[1]), W, H, p: 0 };
-}
-
-function tracePartial(ctx, f, frac){
-  const target = f.len * frac, d = f.dense, cum = f.cum;
-  ctx.beginPath();
-  ctx.moveTo(d[0][0], d[0][1]);
-  for (let i = 1; i < d.length; i++){
-    if (cum[i] >= target){
-      const seg = cum[i] - cum[i - 1] || 1e-6;
-      const t = (target - cum[i - 1]) / seg;
-      ctx.lineTo(d[i - 1][0] + (d[i][0] - d[i - 1][0]) * t,
-                 d[i - 1][1] + (d[i][1] - d[i - 1][1]) * t);
-      return;
-    }
-    ctx.lineTo(d[i][0], d[i][1]);
-  }
-}
+const LAYER_ORDER = { waterarea:0, waterway:0, park:1, campus:2, highway:3, road:4, rail:5 };
+const GROUP_DELAY = [0, 0.10, 0.16, 0.24, 0.33, 0.45];  // trace start per layer
+const STROKE_DUR = 0.38, FADE_DUR = 0.18;               // shares of the timeline
+const IN_TIME = 2.1, OUT_TIME = 0.8;                    // seconds
 const clamp01 = v => Math.min(Math.max(v, 0), 1);
 
-/* Draw one map at trace progress p (0 → blank, 1 → complete). */
-function drawMap(ctx, m, p){
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  for (const f of m.features){
-    const lp = clamp01((p - f.delay) / FEATURE_DUR);
-    if (lp <= 0) continue;
+const svgCache = new Map();
+function fetchMapSvg(id){
+  if (!svgCache.has(id))
+    svgCache.set(id, fetch("assets/maps/" + id + ".svg")
+      .then(r => r.ok ? r.text() : null).catch(() => null));
+  return svgCache.get(id);
+}
 
-    if (f.closed && lp >= 1){                 // settle the ring fill in
-      const fa = clamp01((p - f.delay - FEATURE_DUR) / 0.1);
-      if (fa > 0 && f.style.fill){
-        ctx.save(); ctx.globalAlpha = fa;
-        tracePartial(ctx, f, 1); ctx.closePath();
-        ctx.fillStyle = f.style.fill; ctx.fill();
-        ctx.restore();
+/* Inline the SVG, measure every stroke, start everything hidden.
+   Runs synchronously after insertion, so nothing flashes. */
+function buildMapEntry(svgText, org){
+  const holder = document.createElement("div");
+  holder.className = "map-svg";
+  holder.innerHTML = svgText;               // our own generated asset
+  mapLayer.appendChild(holder);             // appended last = drawn on top
+  const items = [];
+  holder.querySelectorAll("g.layer").forEach(g => {
+    const kind = g.dataset.kind;
+    if (kind === "labels" || kind === "marker"){
+      for (const el of g.children){
+        el.style.opacity = "0";
+        items.push({ el, type: "fade", delay: 0.78 });
       }
+      return;
     }
-    ctx.strokeStyle = f.style.stroke;
-    ctx.lineWidth = f.w;
-    ctx.setLineDash(f.style.dash || []);
-    tracePartial(ctx, f, lp);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    if (f.name && f.label){                   // label fades in after its stroke
-      const la = clamp01((p - f.delay - FEATURE_DUR) / 0.1);
-      if (la > 0){
-        ctx.save(); ctx.globalAlpha = la;
-        ctx.font = (f.style.italic ? "italic " : "") + "500 11px Inter, sans-serif";
-        ctx.textAlign = "center";
-        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)";
-        ctx.strokeText(f.name, f.label[0], f.label[1]);
-        ctx.fillStyle = f.style.label;
-        ctx.fillText(f.name, f.label[0], f.label[1]);
-        ctx.restore();
-      }
+    const ord = LAYER_ORDER[kind] !== undefined ? LAYER_ORDER[kind] : 4;
+    let i = 0;
+    for (const el of g.querySelectorAll("path")){
+      let len = 0;
+      try { len = el.getTotalLength(); } catch (e) {}
+      const delay = GROUP_DELAY[ord] + Math.min(i, 8) * 0.03;
+      if (!len){ el.style.opacity = "0"; items.push({ el, type: "fade", delay }); continue; }
+      len += 1;                             // headroom so no dot lingers at the seam
+      el.style.strokeDasharray = len;
+      el.style.strokeDashoffset = len;
+      const it = { el, type: "stroke", len, delay,
+        dash: el.dataset.dash || null, fill: !!el.dataset.fill };
+      if (it.fill) el.style.fillOpacity = "0";
+      items.push(it); i++;
     }
-  }
+  });
+  return { holder, items, org, p: 0 };
+}
 
-  /* site marker + place caption arrive with the last strokes */
-  const ma = clamp01((p - 0.72) / 0.2);
-  if (ma > 0){
-    const [mx, my] = m.marker;
-    ctx.save(); ctx.globalAlpha = ma;
-    ctx.beginPath(); ctx.arc(mx, my, 11 * ma, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(52,87,213,.35)"; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(mx, my, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#3457D5"; ctx.fill();
-
-    const lat = m.org.coords[0], lng = m.org.coords[1];
-    const coordTxt =
-      Math.abs(lat).toFixed(3) + "° " + (lat >= 0 ? "N" : "S") + "   " +
-      Math.abs(lng).toFixed(3) + "° " + (lng >= 0 ? "E" : "W");
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#6B7280";
-    ctx.font = "500 13px Inter, sans-serif";
-    ctx.fillText(m.org.place, 26, m.H - 46);
-    ctx.fillStyle = "#A8ADB5";
-    ctx.font = "12px Inter, sans-serif";
-    ctx.fillText(coordTxt, 26, m.H - 26);
-    ctx.restore();
+/* Set every element to trace progress p (0 = blank, 1 = complete). */
+function applyMap(m){
+  const p = m.p;
+  for (const it of m.items){
+    if (it.type === "fade"){
+      it.el.style.opacity = clamp01((p - it.delay) / FADE_DUR).toFixed(3);
+      continue;
+    }
+    const lp = clamp01((p - it.delay) / STROKE_DUR);
+    if (lp >= 1){
+      it.el.style.strokeDashoffset = "0";
+      if (it.dash) it.el.style.strokeDasharray = it.dash;   // real dashes once drawn
+    } else {
+      if (it.dash) it.el.style.strokeDasharray = it.len;    // back to trace mode
+      it.el.style.strokeDashoffset = (it.len * (1 - lp)).toFixed(1);
+    }
+    if (it.fill)
+      it.el.style.fillOpacity = clamp01((p - it.delay - STROKE_DUR) / FADE_DUR).toFixed(3);
   }
 }
 
 /* -------- transition driver: old traces out, new traces in -------- */
-const IN_TIME = 2.1, OUT_TIME = 0.8;          // seconds
-let curMap = null, outMap = null, mapRAF = 0, mapLastT = 0;
+let curMap = null, outMap = null, mapRAF = 0, mapLastT = 0, mapToken = 0;
 
-function paintMaps(){
-  mapCtx.setTransform(DPR_MAP, 0, 0, DPR_MAP, 0, 0);
-  mapCtx.fillStyle = "#FFFFFF";
-  mapCtx.fillRect(0, 0, mapW, mapH);
-  if (outMap) drawMap(mapCtx, outMap, outMap.p);
-  if (curMap) drawMap(mapCtx, curMap, curMap.p);
-}
 function mapFrame(now){
   const dt = Math.min((now - mapLastT) / 1000, 0.05);
   mapLastT = now;
   let busy = false;
   if (outMap){
     outMap.p -= dt / OUT_TIME;
-    if (outMap.p <= 0) outMap = null; else busy = true;
+    if (outMap.p <= 0){ outMap.holder.remove(); outMap = null; }
+    else { applyMap(outMap); busy = true; }
   }
   if (curMap && curMap.p < 1){
     curMap.p = Math.min(1, curMap.p + dt / IN_TIME);
+    applyMap(curMap);
     if (curMap.p < 1) busy = true;
   }
-  paintMaps();
+  mapCap.style.opacity = curMap ? clamp01((curMap.p - 0.72) / 0.2).toFixed(3) : "0";
   mapRAF = busy ? requestAnimationFrame(mapFrame) : 0;
 }
+
+/* Retire the current map. Rapid section changes keep whichever
+   outgoing map is more complete tracing out, so fast scrolling
+   never blanks the layer. */
+function retireCurrent(){
+  if (!curMap) return;
+  if (outMap && outMap.p > curMap.p) curMap.holder.remove();
+  else { if (outMap) outMap.holder.remove(); outMap = curMap; }
+  curMap = null;
+}
+
 function traceTo(idx){
   if (idx === currentMapIdx) return;
   currentMapIdx = idx;
-  const next = prepareMap(idx, mapW, mapH);
-  if (reduced || mapW < 4){
-    outMap = null; curMap = next; curMap.p = 1;
-    if (mapRAF){ cancelAnimationFrame(mapRAF); mapRAF = 0; }
-    paintMaps();
-    return;
-  }
-  if (curMap){
-    /* Rapid section changes: keep whichever outgoing map is more
-       complete tracing out, drop a barely-started incomer, so fast
-       scrolling never blanks the layer. */
-    if (!(outMap && outMap.p > curMap.p)) outMap = curMap;
-  }
-  curMap = next;
-  if (!mapRAF){ mapLastT = performance.now(); mapRAF = requestAnimationFrame(mapFrame); }
+  const org = ORGS[idx], tok = ++mapToken;
+  fetchMapSvg(org.id).then(txt => {
+    if (tok !== mapToken) return;           // a newer section took over
+    const lat = org.coords[0], lng = org.coords[1];
+    mapCapPlace.textContent = org.place;
+    mapCapCoords.textContent =
+      Math.abs(lat).toFixed(3) + "° " + (lat >= 0 ? "N" : "S") + "   " +
+      Math.abs(lng).toFixed(3) + "° " + (lng >= 0 ? "E" : "W");
+    if (reduced){
+      if (curMap) curMap.holder.remove();
+      if (outMap){ outMap.holder.remove(); outMap = null; }
+      if (mapRAF){ cancelAnimationFrame(mapRAF); mapRAF = 0; }
+      curMap = null;
+      if (txt){ curMap = buildMapEntry(txt, org); curMap.p = 1; applyMap(curMap); }
+      mapCap.style.opacity = txt ? "1" : "0";
+      return;
+    }
+    retireCurrent();
+    if (txt) curMap = buildMapEntry(txt, org);
+    if (!mapRAF){ mapLastT = performance.now(); mapRAF = requestAnimationFrame(mapFrame); }
+  });
 }
 
 /* =============================================================
@@ -892,25 +818,18 @@ const io = new IntersectionObserver(entries => {
 document.querySelectorAll(".panel").forEach(s => io.observe(s));
 
 /* ---------- boot ---------- */
-function sizeAll(){
-  sizeMapBase(); sizeStage();
-  if (currentMapIdx >= 0){
-    if (mapRAF){ cancelAnimationFrame(mapRAF); mapRAF = 0; }
-    outMap = null;
-    curMap = prepareMap(currentMapIdx, mapW, mapH);
-    curMap.p = 1;
-    paintMaps();
-  }
-}
+/* the SVG maps scale themselves (preserveAspectRatio slice) — only
+   the badge stage needs resize work */
 window.addEventListener("resize", (() => {
-  let t; return () => { clearTimeout(t); t = setTimeout(sizeAll, 150); };
+  let t; return () => { clearTimeout(t); t = setTimeout(sizeStage, 150); };
 })());
 
-sizeAll();
+sizeStage();
 setActive(-1);
 requestAnimationFrame(loop);
+ORGS.forEach(o => fetchMapSvg(o.id));        // warm the cache for the other stops
 
-/* redraw canvas text once webfonts are in */
+/* redraw canvas text once webfonts are in (SVG labels restyle themselves) */
 if (document.fonts && document.fonts.ready){
   document.fonts.ready.then(() => {
     ORGS.forEach((o, i) => {
@@ -920,7 +839,6 @@ if (document.fonts && document.fonts.ready){
     backTex.image = badgeCardCanvas(null, true);
     backTex.needsUpdate = true;
     frontMat.map = cardTex[Math.max(active, 0)];
-    if (currentMapIdx >= 0 && !mapRAF) paintMaps();   // redraw labels in the webfont
   });
 }
 })();

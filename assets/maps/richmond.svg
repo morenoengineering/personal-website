@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of Richmond, Virginia">
+  <!-- INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access — data © OpenStreetMap contributors, ODbL -->
+  <style>
+  text{font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:rgba(255,255,255,.88);stroke-width:3px;letter-spacing:.02em}
+  .wa{fill:#E3ECF8;stroke:#C9D8EF;stroke-width:1.4}
+  .ww{fill:none;stroke:#BFD2ED;stroke-linecap:round;stroke-linejoin:round}
+  .pk{fill:#E5EFE1;stroke:#BFD6B8;stroke-width:1.6}
+  .cp{fill:#EEF0FA;stroke:#C3CAE4;stroke-width:1.8}
+  .hw{fill:none;stroke:#AEB6C2;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .rd{fill:none;stroke:#C9CFD8;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .r2{fill:none;stroke:#DADFE6;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .rl{fill:none;stroke:#C6CBD4;stroke-width:1.4}
+  .lb{font-size:12px;font-weight:500;fill:#98A0AB}
+  .lb-water{fill:#8CA0C6;font-style:italic}
+  .lb-park{fill:#85A07E}
+  .lb-campus{fill:#767E92;font-weight:600}
+  </style>
+  <g class="layer" data-kind="waterarea">
+  </g>
+  <g class="layer" data-kind="waterway">
+    <path class="ww" d="M-241.4 183C-208.1 207.6 -108 291.1 -41.3 330.5C25.3 369.8 97.9 394.3 158.7 418.9C219.5 443.5 266.6 449.6 323.5 477.9C380.4 506.1 446.1 563.9 500 588.5C553.9 613 598.1 611.8 647.1 625.3C696.1 638.8 748.1 645 794.2 669.5C840.3 694.1 892.3 731 923.7 772.7C955 814.5 982.5 869.8 982.5 920.2C982.5 970.6 933.5 1049.2 923.7 1075" style="stroke-width:12"/>
+  </g>
+  <g class="layer" data-kind="park">
+    <path class="pk" d="M417.6 551.6C435.3 541.8 484.3 539.3 500 551.6C515.7 563.9 519.6 608.1 511.8 625.3C503.9 642.5 472.5 657.3 452.9 654.8C433.3 652.3 400 627.8 394.1 610.6C388.2 593.4 400 561.4 417.6 551.6Z" data-fill="1"/>
+    <path class="pk" d="M341.1 566.3C355.8 561.4 400 568.8 411.7 581.1C423.5 593.4 420.6 627.8 411.7 640.1C402.9 652.3 373.5 659.7 358.8 654.8C344.1 649.9 326.4 625.3 323.5 610.6C320.5 595.8 326.4 571.3 341.1 566.3Z" data-fill="1"/>
+    <path class="pk" d="M452.9 699C469.6 692.9 514.7 694.1 529.4 706.4C544.1 718.7 550 758 541.2 772.7C532.4 787.5 495.1 799.8 476.5 794.9C457.8 789.9 433.3 759.2 429.4 743.3C425.5 727.3 436.3 705.2 452.9 699Z" data-fill="1"/>
+    <path class="pk" d="M576.5 610.6C585.3 605.7 613.8 604.4 623.6 610.6C633.4 616.7 639.3 638.8 635.3 647.4C631.4 656 610.8 663.4 600 662.2C589.2 660.9 574.5 648.7 570.6 640.1C566.7 631.5 567.7 615.5 576.5 610.6Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="campus">
+    <path class="cp" d="M35.1 227.3C54.8 215 113.6 219.9 135.2 234.6C156.8 249.4 172.4 293.6 164.6 315.7C156.8 337.8 112.6 368.5 88.1 367.3C63.6 366.1 26.3 331.7 17.5 308.3C8.7 285 15.5 239.5 35.1 227.3Z" data-fill="1"/>
+    <path class="cp" d="M570.6 463.1C585.3 457 627.5 460.7 641.2 470.5C655 480.3 660.8 509.8 653 522.1C645.1 534.4 610.8 546.7 594.1 544.2C577.5 541.8 556.9 520.9 553 507.4C549 493.9 555.9 469.3 570.6 463.1Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="highway">
+    <path class="hw" d="M629.5 -67.6C629.5 -28.3 623.6 94.6 629.5 168.3C635.3 242 649.1 313.3 664.8 374.7C680.4 436.1 709.9 487.7 723.6 536.9C737.3 586 753 617.9 747.1 669.5C741.3 721.1 707.9 782.6 688.3 846.5C668.7 910.4 639.3 1018.5 629.5 1052.9"/>
+    <path class="hw" d="M-123.7 20.8C-83.5 39.3 38.1 97 117.5 131.4C197 165.8 281.3 196.5 352.9 227.3C424.5 258 498 288.7 547.1 315.7C596.1 342.7 630.4 377.1 647.1 389.4"/>
+    <path class="hw" d="M352.9 256.7C355.8 281.3 363.7 357.5 370.5 404.2C377.4 450.9 394.1 496.3 394.1 536.9C394.1 577.4 387.2 608.1 370.5 647.4C353.9 686.7 313.7 727.3 294.1 772.7C274.4 818.2 259.7 895.6 252.9 920.2"/>
+  </g>
+  <g class="layer" data-kind="road">
+    <path class="rd" d="M52.8 418.9C88.1 426.3 195 449.6 264.6 463.1C334.3 476.7 406.8 487.7 470.6 500C534.3 512.3 601 524.6 647.1 536.9C693.2 549.1 730.5 567.6 747.1 573.7"/>
+    <path class="rd" d="M288.2 448.4C315.6 453.3 402.9 469.3 452.9 477.9C502.9 486.5 551 493.9 588.3 500C625.5 506.1 661.8 512.3 676.5 514.7"/>
+    <path class="rd" d="M199.9 492.6C230.3 498.8 324.5 517.2 382.3 529.5C440.2 541.8 498 555.3 547.1 566.3C596.1 577.4 655 590.9 676.5 595.8"/>
+  </g>
+  <g class="layer" data-kind="rail">
+    <path class="rl" d="M199.9 124C225.4 149.8 302.9 228.5 352.9 278.9C402.9 329.2 457.8 380.8 500 426.3C542.2 471.7 571.6 514.7 605.9 551.6C640.2 588.5 679.5 606.9 705.9 647.4C732.4 688 755 770.3 764.8 794.9" data-dash="7 6"/>
+  </g>
+  <g class="layer" data-kind="labels">
+    <text x="88.1" y="290.6" text-anchor="middle" class="lb lb-campus">Univ. of Richmond</text>
+    <text x="602.4" y="501.5" text-anchor="middle" class="lb lb-campus">VCU</text>
+    <text x="647.1" y="616.3" text-anchor="middle" class="lb lb-water">James River</text>
+    <text x="455.3" y="598.8" text-anchor="middle" class="lb lb-park">Byrd Park</text>
+    <text x="485.9" y="743.3" text-anchor="middle" class="lb lb-park">Forest Hill Park</text>
+    <text x="352.9" y="218.3" text-anchor="middle" class="lb">I-64</text>
+    <text x="370.5" y="638.4" text-anchor="middle" class="lb">I-195 / Powhite</text>
+    <text x="547.1" y="557.3" text-anchor="middle" class="lb">Cary St</text>
+  </g>
+  <g class="layer" data-kind="marker">
+    <circle cx="711.8" cy="529.5" r="11" fill="none" stroke="rgba(52,87,213,.35)" stroke-width="1.5"/>
+    <circle cx="711.8" cy="529.5" r="4.5" fill="#3457D5"/>
+  </g>
+</svg>

@@ -12,33 +12,44 @@ over it (Canvas 2D — the page runs exactly one WebGL context, the badge's).
 ```
 index.html                 ← the single-page app (markup, styles, physics, maps)
 content.js                 ← all entry text — EDIT HERE
-mapdata.js                 ← major map features per location (see below)
-tools/fetch-mapdata.mjs    ← regenerates mapdata.js from OpenStreetMap
+assets/maps/<id>.svg       ← one layered map per location (generated)
+tools/fetch-maps.mjs       ← builds those SVGs from OpenStreetMap (Overpass)
+mapdata.js                 ← hand-traced fallback data (generator input only)
 assets/vendor/three.min.js ← three.js r128, vendored (no CDN dependency)
-assets/                    ← real badge scans / map PNGs (later)
 .nojekyll                  ← GitHub Pages serves files untouched
 ```
 
 ## Maps
 
-Each entry's map is drawn from `mapdata.js`: sparse lat/lng polylines for the
-area's major features — water first, then parks, university/work campuses,
-highways, primary roads, and rail — smoothed into curves and traced in as
-animated strokes, with small labels fading in after each stroke lands.
+Each entry's map is a standalone SVG in `assets/maps/` with one `<g>` layer
+per feature class — water areas, waterways, parks, campuses, highways,
+roads, rail, labels, marker. The site inlines the active location's SVG and
+traces every stroke in with the stroke-dashoffset technique (water → parks →
+campuses → highways → roads → rail), fading area fills and labels in behind
+their strokes; leaving a section traces the old map back out while the new
+one traces up over it. The files preview standalone — open one in a browser
+to inspect it.
 
-The checked-in data is hand-traced from knowledge of each area's real
-geography (base geography © OpenStreetMap contributors, ODbL) because the
-environment it was authored in couldn't reach the Overpass API. To swap in
-exact OSM geometry, run from any normal machine:
+To (re)generate the SVGs from real OpenStreetMap geometry, run from any
+machine with open internet access:
 
 ```
-node tools/fetch-mapdata.mjs        # rewrites mapdata.js in place
-node tools/fetch-mapdata.mjs --dry  # prints instead of writing
+node tools/fetch-maps.mjs             # all locations, via the Overpass API
+node tools/fetch-maps.mjs apl cmu     # just these ids
 ```
 
-Adding an entry to `content.js` needs a matching `MAPDATA[id]` block (or the
-map will just show the marker and caption); add the location to `LOCATIONS`
-in the fetch script and re-run it, or hand-author a few features.
+> The Claude Code sandbox this repo was built in blocks all OSM/Overpass
+> hosts, so the checked-in SVGs are interim ones built with
+> `node tools/fetch-maps.mjs --from-mapdata` (hand-traced approximations in
+> `mapdata.js`, © OpenStreetMap contributors, ODbL). Running the command
+> above on a normal machine replaces them with true OSM geometry — riverbank
+> polygons, real curve detail, secondary-road density — with no site changes
+> needed; the SVG contract stays the same.
+
+To add a location: add its entry to `LOCATIONS` in `tools/fetch-maps.mjs`
+(id must match the `content.js` entry), re-run the script, and the site
+picks up `assets/maps/<id>.svg` automatically. Without an SVG the panel
+still works — it just shows no map behind the text.
 
 ## Editing content
 

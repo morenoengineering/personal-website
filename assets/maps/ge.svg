@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of Niskayuna, New York">
+  <!-- INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access — data © OpenStreetMap contributors, ODbL -->
+  <style>
+  text{font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:rgba(255,255,255,.88);stroke-width:3px;letter-spacing:.02em}
+  .wa{fill:#E3ECF8;stroke:#C9D8EF;stroke-width:1.4}
+  .ww{fill:none;stroke:#BFD2ED;stroke-linecap:round;stroke-linejoin:round}
+  .pk{fill:#E5EFE1;stroke:#BFD6B8;stroke-width:1.6}
+  .cp{fill:#EEF0FA;stroke:#C3CAE4;stroke-width:1.8}
+  .hw{fill:none;stroke:#AEB6C2;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .rd{fill:none;stroke:#C9CFD8;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .r2{fill:none;stroke:#DADFE6;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .rl{fill:none;stroke:#C6CBD4;stroke-width:1.4}
+  .lb{font-size:12px;font-weight:500;fill:#98A0AB}
+  .lb-water{fill:#8CA0C6;font-style:italic}
+  .lb-park{fill:#85A07E}
+  .lb-campus{fill:#767E92;font-weight:600}
+  </style>
+  <g class="layer" data-kind="waterarea">
+  </g>
+  <g class="layer" data-kind="waterway">
+    <path class="ww" d="M-90.7 125.7C-63.5 144.2 19.3 193.8 72.7 236.3C126.1 278.9 177.4 338.4 229.8 380.9C282.2 423.4 329.3 461.7 386.9 491.5C444.5 521.3 512.6 545.4 575.4 559.5C638.3 573.7 701.1 562.4 763.9 576.6C826.8 590.7 890.7 641.8 952.5 644.6C1014.2 647.4 1104.3 602.1 1134.7 593.6" style="stroke-width:11"/>
+  </g>
+  <g class="layer" data-kind="park">
+    <path class="pk" d="M123 389.4C143.9 376.7 207.8 372.4 229.8 389.4C251.8 406.4 265.4 467.4 254.9 491.5C244.4 515.6 192.1 538.3 166.9 534C141.8 529.8 111.4 490.1 104.1 466C96.8 441.9 102 402.2 123 389.4Z" data-fill="1"/>
+    <path class="pk" d="M562.8 491.5C573.3 477.3 634.1 481.6 650.8 491.5C667.6 501.4 673.9 536.9 663.4 551C652.9 565.2 604.7 586.5 588 576.6C571.2 566.6 552.4 505.7 562.8 491.5Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="campus">
+    <path class="cp" d="M35 219.3C53.8 208 114.6 205.1 135.5 219.3C156.5 233.5 169 283.1 160.7 304.4C152.3 325.6 108.3 349.7 85.2 346.9C62.2 344.1 30.8 308.6 22.4 287.4C14 266.1 16.1 230.7 35 219.3Z" data-fill="1"/>
+    <path class="cp" d="M368 610.6C389 599.2 452.9 596.4 474.9 610.6C496.9 624.8 508.4 672.9 500 695.6C491.6 718.3 449.7 749.5 424.6 746.7C399.5 743.8 358.6 701.3 349.2 678.6C339.8 655.9 347.1 621.9 368 610.6Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="highway">
+    <path class="hw" d="M-216.4 525.5C-190.2 511.3 -109.6 466 -59.3 440.5C-9 414.9 38.1 382.3 85.2 372.4C132.4 362.5 200.5 379.5 223.5 380.9"/>
+    <path class="hw" d="M1103.3 1010.3C1109.6 963.6 1136.8 823.2 1141 729.7C1145.2 636.1 1136.8 542.5 1128.4 449C1120 355.4 1102.2 247.7 1090.7 168.3C1079.2 88.9 1064.5 5.3 1059.3 -27.4"/>
+  </g>
+  <g class="layer" data-kind="road">
+    <path class="rd" d="M-59.3 304.4C-32.1 321.4 48.6 372.4 104.1 406.4C159.6 440.5 214.1 468.8 273.8 508.5C333.5 548.2 393.2 597.8 462.3 644.6C531.4 691.4 612.1 745.2 688.5 789.2C765 833.1 882.3 888.4 921 908.3"/>
+    <path class="rd" d="M-27.9 474.5C15.1 484.4 148.1 514.2 229.8 534C311.5 553.9 381.6 569.5 462.3 593.6C542.9 617.7 629.9 641.8 713.7 678.6C797.4 715.5 895.9 776.4 965 814.7C1034.1 853 1101.2 892.7 1128.4 908.3"/>
+    <path class="rd" d="M223.5 423.4C248.6 441.9 317.8 501.4 374.3 534C430.9 566.6 500 599.2 562.8 619.1C625.7 638.9 688.5 637.5 751.4 653.1C814.2 668.7 908.5 702.7 939.9 712.6"/>
+    <path class="rd" d="M393.2 210.8C400.5 243.4 422.5 342.6 437.2 406.4C451.8 470.2 466.5 532.6 481.1 593.6C495.8 654.5 517.8 742.4 525.1 772.2"/>
+  </g>
+  <g class="layer" data-kind="rail">
+    <path class="rl" d="M-122.1 338.4C-89.7 352.6 8.8 395.1 72.7 423.4C136.6 451.8 190 475.9 261.2 508.5C332.4 541.1 418.3 582.2 500 619.1C581.7 655.9 666.5 695.6 751.4 729.7C836.2 763.7 966.1 807.6 1009 823.2" data-dash="7 6"/>
+  </g>
+  <g class="layer" data-kind="labels">
+    <text x="87.8" y="275.4" text-anchor="middle" class="lb lb-campus">Union College</text>
+    <text x="423.3" y="668.4" text-anchor="middle" class="lb lb-campus">GE Global Research</text>
+    <text x="575.4" y="550.5" text-anchor="middle" class="lb lb-water">Mohawk River</text>
+    <text x="175.7" y="454.1" text-anchor="middle" class="lb lb-park">Central Park</text>
+    <text x="85.2" y="363.4" text-anchor="middle" class="lb">I-890</text>
+    <text x="713.7" y="669.6" text-anchor="middle" class="lb">NY-7</text>
+    <text x="562.8" y="610.1" text-anchor="middle" class="lb">River Rd</text>
+  </g>
+  <g class="layer" data-kind="marker">
+    <circle cx="581.7" cy="585.1" r="11" fill="none" stroke="rgba(52,87,213,.35)" stroke-width="1.5"/>
+    <circle cx="581.7" cy="585.1" r="4.5" fill="#3457D5"/>
+  </g>
+</svg>
