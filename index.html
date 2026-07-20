@@ -66,30 +66,20 @@
     position:fixed; left:var(--stage-w); right:0; top:0; bottom:0;
     z-index:0; overflow:hidden; background:var(--bg);
   }
-  .map-layer > canvas{position:absolute; inset:0; width:100%; height:100%}
+  .map-svg{position:absolute; inset:0}
+  .map-svg svg{display:block; width:100%; height:100%}
+  .map-cap{
+    position:absolute; left:26px; bottom:22px; z-index:2; opacity:0;
+    display:flex; flex-direction:column; gap:2px; pointer-events:none;
+  }
+  #mapCapPlace{color:#6B7280; font-size:13px; font-weight:500}
+  #mapCapCoords{color:#A8ADB5; font-size:12px; font-variant-numeric:tabular-nums}
   .map-layer::after{           /* readability wash over the text side */
     content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
     background:linear-gradient(90deg,
       rgba(255,255,255,.93) 0%, rgba(255,255,255,.72) 42%,
       rgba(255,255,255,.30) 72%, rgba(255,255,255,.12) 100%);
   }
-  .fold-wrap{
-    position:absolute; inset:0; z-index:2; pointer-events:none;
-    perspective:1500px; perspective-origin:28% 50%;
-  }
-  .fold-3d{position:absolute; inset:0; transform-style:preserve-3d}
-  .fold-seg{
-    position:absolute; top:0; height:100%;
-    transform-origin:left center; transform-style:preserve-3d;
-    backface-visibility:visible;
-  }
-  .fold-seg > canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
-  .fold-shade, .fold-back{position:absolute; inset:0; opacity:0}
-  .fold-shade{
-    background:linear-gradient(90deg,
-      rgba(21,24,29,.32) 0%, rgba(52,87,213,.12) 45%, rgba(21,24,29,0) 90%);
-  }
-  .fold-back{background:rgba(255,255,255,.92)}
 
   /* ---------- right column ---------- */
   main{position:relative; z-index:1; margin-left:var(--stage-w)}
@@ -208,7 +198,9 @@
 </aside>
 
 <div class="map-layer" id="mapLayer" aria-hidden="true">
-  <canvas id="mapBase"></canvas>
+  <div class="map-cap" id="mapCap">
+    <span id="mapCapPlace"></span><span id="mapCapCoords"></span>
+  </div>
 </div>
 
 <main id="content"></main>
@@ -218,7 +210,8 @@
 <footer>
   <span id="footLinks"></span>
   <span class="sep">·</span>
-  Static files only — one WebGL context (the badge), CSS-3D map folds.
+  Static files only — one WebGL context (the badge); location maps traced
+  from real geography (base data © OpenStreetMap contributors).
 </footer>
 
 <noscript>
@@ -239,198 +232,149 @@
 "use strict";
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const DPR_MAP   = Math.min(window.devicePixelRatio || 1, 1.5);
 const DPR_STAGE = Math.min(window.devicePixelRatio || 1, 2);
 
-/* ---------- tiny seeded RNG so each map is stable ---------- */
-function mulberry32(seed){
-  return function(){
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function seedFrom(coords){
-  return (Math.round(coords[0] * 1000) * 73856093) ^ (Math.round(coords[1] * 1000) * 19349663);
-}
-
 /* =============================================================
-   Procedural location map (Canvas 2D) — stylized, not tiles.
-   Swap this function for static Mapbox/MapTiler image URLs or
-   pre-rendered PNGs if real maps are wanted later; the fold
-   machinery below is unchanged.
-   ============================================================= */
-function mapCanvasFor(org, W, H){
-  const c = document.createElement("canvas");
-  c.width = Math.max(2, Math.round(W * DPR_MAP));
-  c.height = Math.max(2, Math.round(H * DPR_MAP));
-  const x = c.getContext("2d");
-  x.scale(DPR_MAP, DPR_MAP);
-  const rnd = mulberry32(seedFrom(org.coords));
-
-  x.fillStyle = "#FFFFFF";
-  x.fillRect(0, 0, W, H);
-
-  const cx = W / 2, cy = H / 2;
-  const diag = Math.hypot(W, H);
-  const theta = (rnd() - 0.5) * 0.9;           // grid rotation
-  const minor = 40 + rnd() * 26;               // block size
-  const majorEvery = 3 + Math.floor(rnd() * 3);
-
-  /* river — a light band wandering across, under the streets */
-  x.save();
-  const vertical = rnd() > 0.5;
-  const amp = 40 + rnd() * 90, ph = rnd() * Math.PI * 2;
-  const off = (rnd() - 0.5) * (vertical ? W : H) * 0.6;
-  x.beginPath();
-  const steps = 60;
-  for (let i = 0; i <= steps; i++){
-    const t = i / steps;
-    const along = t * (vertical ? H : W);
-    const across = (vertical ? cx : cy) + off +
-      Math.sin(ph + t * (2.5 + rnd() * 0.02)) * amp;
-    const px = vertical ? across : along;
-    const py = vertical ? along : across;
-    if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
-  }
-  x.strokeStyle = "#E3E9F4";
-  x.lineWidth = 22 + rnd() * 14;
-  x.lineCap = "round"; x.lineJoin = "round";
-  x.stroke();
-  x.restore();
-
-  /* street grid — two rotated line families, thin light gray */
-  x.save();
-  x.translate(cx, cy); x.rotate(theta);
-  for (const dir of [0, Math.PI / 2]){
-    x.save(); x.rotate(dir);
-    const n = Math.ceil(diag / minor);
-    for (let i = -n; i <= n; i++){
-      const major = (i % majorEvery) === 0;
-      if (!major && rnd() < 0.08) continue;    // drop a lane here and there
-      x.beginPath();
-      x.moveTo(i * minor, -diag); x.lineTo(i * minor, diag);
-      x.strokeStyle = major ? "#D9DDE3" : "#E7EAEE";
-      x.lineWidth = major ? 1.6 : 1;
-      x.stroke();
-    }
-    x.restore();
-  }
-  /* one diagonal boulevard */
-  x.beginPath();
-  const bAng = (rnd() - 0.5) * 1.2 + Math.PI / 4;
-  x.moveTo(-Math.cos(bAng) * diag, -Math.sin(bAng) * diag);
-  x.lineTo(Math.cos(bAng) * diag, Math.sin(bAng) * diag);
-  x.strokeStyle = "#D9DDE3"; x.lineWidth = 1.6; x.stroke();
-  x.restore();
-
-  /* site marker — the one accent on the map */
-  const mx = cx + (rnd() - 0.5) * W * 0.22;
-  const my = cy + (rnd() - 0.5) * H * 0.22;
-  x.beginPath(); x.arc(mx, my, 11, 0, Math.PI * 2);
-  x.strokeStyle = "rgba(52,87,213,.35)"; x.lineWidth = 1.5; x.stroke();
-  x.beginPath(); x.arc(mx, my, 4.5, 0, Math.PI * 2);
-  x.fillStyle = "#3457D5"; x.fill();
-
-  /* label — place + coordinates */
-  const lat = org.coords[0], lng = org.coords[1];
-  const coordTxt =
-    Math.abs(lat).toFixed(3) + "° " + (lat >= 0 ? "N" : "S") + "   " +
-    Math.abs(lng).toFixed(3) + "° " + (lng >= 0 ? "E" : "W");
-  x.fillStyle = "#6B7280";
-  x.font = "500 13px Inter, sans-serif";
-  x.fillText(org.place, 26, H - 46);
-  x.fillStyle = "#A8ADB5";
-  x.font = "12px Inter, sans-serif";
-  x.fillText(coordTxt, 26, H - 26);
-
-  return c;
-}
-
-/* =============================================================
-   Paper-fold transition (CSS 3D, no second WebGL context).
-   The incoming map is sliced into six strips in a nested hinge
-   chain; it unfolds strip by strip over the still-flat previous
-   map, then bakes into the flat base.
+   Location maps â layered SVGs in assets/maps/<id>.svg, built by
+   tools/fetch-maps.mjs from OpenStreetMap data. Every stroked
+   path is traced in with the stroke-dashoffset technique,
+   staggered by layer (water → parks → campuses → highways →
+   roads → rail); area fills and labels fade in behind their
+   strokes. Leaving a section traces the old map back out while
+   the new one traces up over it.
    ============================================================= */
 const mapLayer = document.getElementById("mapLayer");
-const mapBase  = document.getElementById("mapBase");
-let mapW = 0, mapH = 0, currentMapIdx = -1;
-let foldWrap = null, foldRAF = 0, pendingMap = null;
+const mapCap = document.getElementById("mapCap");
+const mapCapPlace = document.getElementById("mapCapPlace");
+const mapCapCoords = document.getElementById("mapCapCoords");
+let currentMapIdx = -1;
 
-function sizeMapBase(){
-  mapW = mapLayer.clientWidth; mapH = mapLayer.clientHeight;
-  mapBase.width = Math.max(2, Math.round(mapW * DPR_MAP));
-  mapBase.height = Math.max(2, Math.round(mapH * DPR_MAP));
+const LAYER_ORDER = { waterarea:0, waterway:0, park:1, campus:2, highway:3, road:4, rail:5 };
+const GROUP_DELAY = [0, 0.10, 0.16, 0.24, 0.33, 0.45];  // trace start per layer
+const STROKE_DUR = 0.38, FADE_DUR = 0.18;               // shares of the timeline
+const IN_TIME = 2.1, OUT_TIME = 0.8;                    // seconds
+const clamp01 = v => Math.min(Math.max(v, 0), 1);
+
+const svgCache = new Map();
+function fetchMapSvg(id){
+  if (!svgCache.has(id))
+    svgCache.set(id, fetch("assets/maps/" + id + ".svg")
+      .then(r => r.ok ? r.text() : null).catch(() => null));
+  return svgCache.get(id);
 }
-function bake(src){
-  mapBase.getContext("2d").drawImage(src, 0, 0, mapBase.width, mapBase.height);
+
+/* Inline the SVG, measure every stroke, start everything hidden.
+   Runs synchronously after insertion, so nothing flashes. */
+function buildMapEntry(svgText, org){
+  const holder = document.createElement("div");
+  holder.className = "map-svg";
+  holder.innerHTML = svgText;               // our own generated asset
+  mapLayer.appendChild(holder);             // appended last = drawn on top
+  const items = [];
+  holder.querySelectorAll("g.layer").forEach(g => {
+    const kind = g.dataset.kind;
+    if (kind === "labels" || kind === "marker"){
+      for (const el of g.children){
+        el.style.opacity = "0";
+        items.push({ el, type: "fade", delay: 0.78 });
+      }
+      return;
+    }
+    const ord = LAYER_ORDER[kind] !== undefined ? LAYER_ORDER[kind] : 4;
+    let i = 0;
+    for (const el of g.querySelectorAll("path")){
+      let len = 0;
+      try { len = el.getTotalLength(); } catch (e) {}
+      const delay = GROUP_DELAY[ord] + Math.min(i, 8) * 0.03;
+      if (!len){ el.style.opacity = "0"; items.push({ el, type: "fade", delay }); continue; }
+      len += 1;                             // headroom so no dot lingers at the seam
+      el.style.strokeDasharray = len;
+      el.style.strokeDashoffset = len;
+      const it = { el, type: "stroke", len, delay,
+        dash: el.dataset.dash || null, fill: !!el.dataset.fill };
+      if (it.fill) el.style.fillOpacity = "0";
+      items.push(it); i++;
+    }
+  });
+  return { holder, items, org, p: 0 };
 }
-function cancelFold(){
-  if (foldRAF) cancelAnimationFrame(foldRAF); foldRAF = 0;
-  if (foldWrap){ if (pendingMap) bake(pendingMap); foldWrap.remove(); foldWrap = null; pendingMap = null; }
+
+/* Set every element to trace progress p (0 = blank, 1 = complete). */
+function applyMap(m){
+  const p = m.p;
+  for (const it of m.items){
+    if (it.type === "fade"){
+      it.el.style.opacity = clamp01((p - it.delay) / FADE_DUR).toFixed(3);
+      continue;
+    }
+    const lp = clamp01((p - it.delay) / STROKE_DUR);
+    if (lp >= 1){
+      it.el.style.strokeDashoffset = "0";
+      if (it.dash) it.el.style.strokeDasharray = it.dash;   // real dashes once drawn
+    } else {
+      if (it.dash) it.el.style.strokeDasharray = it.len;    // back to trace mode
+      it.el.style.strokeDashoffset = (it.len * (1 - lp)).toFixed(1);
+    }
+    if (it.fill)
+      it.el.style.fillOpacity = clamp01((p - it.delay - STROKE_DUR) / FADE_DUR).toFixed(3);
+  }
 }
-function easeOutBack(p){
-  const s = 1.35;
-  return 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+
+/* -------- transition driver: old traces out, new traces in -------- */
+let curMap = null, outMap = null, mapRAF = 0, mapLastT = 0, mapToken = 0;
+
+function mapFrame(now){
+  const dt = Math.min((now - mapLastT) / 1000, 0.05);
+  mapLastT = now;
+  let busy = false;
+  if (outMap){
+    outMap.p -= dt / OUT_TIME;
+    if (outMap.p <= 0){ outMap.holder.remove(); outMap = null; }
+    else { applyMap(outMap); busy = true; }
+  }
+  if (curMap && curMap.p < 1){
+    curMap.p = Math.min(1, curMap.p + dt / IN_TIME);
+    applyMap(curMap);
+    if (curMap.p < 1) busy = true;
+  }
+  mapCap.style.opacity = curMap ? clamp01((curMap.p - 0.72) / 0.2).toFixed(3) : "0";
+  mapRAF = busy ? requestAnimationFrame(mapFrame) : 0;
 }
-function foldTo(idx){
+
+/* Retire the current map. Rapid section changes keep whichever
+   outgoing map is more complete tracing out, so fast scrolling
+   never blanks the layer. */
+function retireCurrent(){
+  if (!curMap) return;
+  if (outMap && outMap.p > curMap.p) curMap.holder.remove();
+  else { if (outMap) outMap.holder.remove(); outMap = curMap; }
+  curMap = null;
+}
+
+function traceTo(idx){
   if (idx === currentMapIdx) return;
   currentMapIdx = idx;
-  const org = ORGS[idx];
-  cancelFold();
-  const next = mapCanvasFor(org, mapW, mapH);
-  if (reduced || mapW < 4){ bake(next); return; }
-
-  pendingMap = next;
-  const N = 6, w = mapW / N;
-  foldWrap = document.createElement("div");
-  foldWrap.className = "fold-wrap";
-  const root3d = document.createElement("div");
-  root3d.className = "fold-3d";
-  foldWrap.appendChild(root3d);
-
-  const segs = [];
-  let parent = root3d;
-  const sliceW = Math.ceil(w * DPR_MAP) + 1;   // 1px overlap kills seams
-  for (let i = 0; i < N; i++){
-    const seg = document.createElement("div");
-    seg.className = "fold-seg";
-    seg.style.width = w + "px";
-    seg.style.left = (i === 0 ? 0 : w) + "px";
-    const sc = document.createElement("canvas");
-    sc.width = sliceW; sc.height = next.height;
-    sc.getContext("2d").drawImage(next,
-      Math.round(i * w * DPR_MAP), 0, sliceW, next.height,
-      0, 0, sliceW, next.height);
-    const shade = document.createElement("div"); shade.className = "fold-shade";
-    const back  = document.createElement("div"); back.className  = "fold-back";
-    seg.appendChild(sc); seg.appendChild(shade); seg.appendChild(back);
-    parent.appendChild(seg);
-    segs.push({ seg, shade, back });
-    parent = seg;
-  }
-
-  mapLayer.appendChild(foldWrap);
-
-  const stagger = 90, dur = 690;               // ≈1.05 s total
-  const t0 = performance.now();
-  function frame(now){
-    let done = true;
-    for (let i = 1; i < N; i++){
-      const p = Math.min(Math.max((now - t0 - (i - 1) * stagger) / dur, 0), 1);
-      if (p < 1) done = false;
-      const a = 179.2 * (1 - easeOutBack(p));  // 179.2° folded → 0° flat (slight overshoot past flat)
-      segs[i].seg.style.transform = "rotateY(" + a + "deg) translateZ(0.35px)";
-      const abs = Math.min(Math.max(a, 0), 180);
-      segs[i].shade.style.opacity = (Math.sin(abs / 180 * Math.PI) * 0.85).toFixed(3);
-      segs[i].back.style.opacity  = Math.min(Math.max((abs - 90) / 45, 0), 1).toFixed(3);
+  const org = ORGS[idx], tok = ++mapToken;
+  fetchMapSvg(org.id).then(txt => {
+    if (tok !== mapToken) return;           // a newer section took over
+    const lat = org.coords[0], lng = org.coords[1];
+    mapCapPlace.textContent = org.place;
+    mapCapCoords.textContent =
+      Math.abs(lat).toFixed(3) + "° " + (lat >= 0 ? "N" : "S") + "   " +
+      Math.abs(lng).toFixed(3) + "° " + (lng >= 0 ? "E" : "W");
+    if (reduced){
+      if (curMap) curMap.holder.remove();
+      if (outMap){ outMap.holder.remove(); outMap = null; }
+      if (mapRAF){ cancelAnimationFrame(mapRAF); mapRAF = 0; }
+      curMap = null;
+      if (txt){ curMap = buildMapEntry(txt, org); curMap.p = 1; applyMap(curMap); }
+      mapCap.style.opacity = txt ? "1" : "0";
+      return;
     }
-    if (done){ cancelFold(); }
-    else foldRAF = requestAnimationFrame(frame);
-  }
-  foldRAF = requestAnimationFrame(frame);
+    retireCurrent();
+    if (txt) curMap = buildMapEntry(txt, org);
+    if (!mapRAF){ mapLastT = performance.now(); mapRAF = requestAnimationFrame(mapFrame); }
+  });
 }
 
 /* =============================================================
@@ -858,7 +802,7 @@ function setActive(i){
   active = i;
   const badgeIdx = Math.max(i, 0);       // intro shows the first card as a stand-in
   setBadge(badgeIdx);
-  foldTo(badgeIdx);
+  traceTo(badgeIdx);
   capOrg.textContent = i < 0 ? PROFILE.name : ORGS[i].org;
   capNum.textContent = i < 0 ? "Overview" : ORGS[i].no + " / " +
     String(ORGS.length).padStart(2, "0");
@@ -874,22 +818,18 @@ const io = new IntersectionObserver(entries => {
 document.querySelectorAll(".panel").forEach(s => io.observe(s));
 
 /* ---------- boot ---------- */
-function sizeAll(){
-  sizeMapBase(); sizeStage();
-  if (currentMapIdx >= 0){
-    cancelFold();
-    bake(mapCanvasFor(ORGS[currentMapIdx], mapW, mapH));
-  }
-}
+/* the SVG maps scale themselves (preserveAspectRatio slice) — only
+   the badge stage needs resize work */
 window.addEventListener("resize", (() => {
-  let t; return () => { clearTimeout(t); t = setTimeout(sizeAll, 150); };
+  let t; return () => { clearTimeout(t); t = setTimeout(sizeStage, 150); };
 })());
 
-sizeAll();
+sizeStage();
 setActive(-1);
 requestAnimationFrame(loop);
+ORGS.forEach(o => fetchMapSvg(o.id));        // warm the cache for the other stops
 
-/* redraw canvas text once webfonts are in */
+/* redraw canvas text once webfonts are in (SVG labels restyle themselves) */
 if (document.fonts && document.fonts.ready){
   document.fonts.ready.then(() => {
     ORGS.forEach((o, i) => {
@@ -899,7 +839,6 @@ if (document.fonts && document.fonts.ready){
     backTex.image = badgeCardCanvas(null, true);
     backTex.needsUpdate = true;
     frontMat.map = cardTex[Math.max(active, 0)];
-    if (currentMapIdx >= 0){ cancelFold(); bake(mapCanvasFor(ORGS[currentMapIdx], mapW, mapH)); }
   });
 }
 })();

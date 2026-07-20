@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of Laurel, Maryland">
+  <!-- INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access — data © OpenStreetMap contributors, ODbL -->
+  <style>
+  text{font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:rgba(255,255,255,.88);stroke-width:3px;letter-spacing:.02em}
+  .wa{fill:#E3ECF8;stroke:#C9D8EF;stroke-width:1.4}
+  .ww{fill:none;stroke:#BFD2ED;stroke-linecap:round;stroke-linejoin:round}
+  .pk{fill:#E5EFE1;stroke:#BFD6B8;stroke-width:1.6}
+  .cp{fill:#EEF0FA;stroke:#C3CAE4;stroke-width:1.8}
+  .hw{fill:none;stroke:#AEB6C2;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .rd{fill:none;stroke:#C9CFD8;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .r2{fill:none;stroke:#DADFE6;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .rl{fill:none;stroke:#C6CBD4;stroke-width:1.4}
+  .lb{font-size:12px;font-weight:500;fill:#98A0AB}
+  .lb-water{fill:#8CA0C6;font-style:italic}
+  .lb-park{fill:#85A07E}
+  .lb-campus{fill:#767E92;font-weight:600}
+  </style>
+  <g class="layer" data-kind="waterarea">
+  </g>
+  <g class="layer" data-kind="waterway">
+    <path class="ww" d="M-202.3 411.5C-163.9 430 -41.1 492.6 28 522.1C97.1 551.6 157.5 561.4 212.2 588.5C266.9 615.5 313.9 664.6 356.1 684.3C398.3 703.9 430 692.9 465.5 706.4C501 719.9 535.5 748.2 569.1 765.4C602.7 782.6 629.5 792.4 666.9 809.6C704.3 826.8 745.6 845.2 793.6 868.6C841.5 891.9 902 922.6 954.7 949.7C1007.5 976.7 1084.3 1017.2 1110.2 1030.8" style="stroke-width:9"/>
+    <path class="ww" d="M454 -1.3C480.8 35.6 569.1 151.1 615.1 219.9C661.2 288.7 692.8 356.3 730.2 411.5C767.7 466.8 794.5 498.8 839.6 551.6C884.7 604.4 944.2 670.8 1000.8 728.5C1057.4 786.3 1149.5 869.8 1179.2 898.1" style="stroke-width:5"/>
+  </g>
+  <g class="layer" data-kind="park">
+    <path class="pk" d="M891.4 809.6C928.8 758 1054.5 760.5 1121.7 772.7C1188.8 785 1270.4 833 1294.4 883.3C1318.3 933.7 1304.9 1027.1 1265.6 1075C1226.2 1122.9 1119.8 1169.6 1058.4 1170.8C997 1172 925 1142.6 897.2 1082.4C869.4 1022.2 854 861.2 891.4 809.6Z" data-fill="1"/>
+    <path class="pk" d="M51 794.9C75 770.3 167.1 753.1 200.7 765.4C234.3 777.7 257.3 835.4 252.5 868.6C247.7 901.8 204.5 957 171.9 964.4C139.3 971.8 76.9 941.1 56.8 912.8C36.6 884.6 27 819.4 51 794.9Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="campus">
+    <path class="cp" d="M338.8 227.3C362.8 227.3 421.3 232.2 442.4 249.4C463.5 266.6 475.1 309.6 465.5 330.5C455.9 351.3 411.7 375.9 384.9 374.7C358 373.5 318.7 344 304.3 323.1C289.9 302.2 292.8 265.3 298.5 249.4C304.3 233.4 314.8 227.3 338.8 227.3Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="highway">
+    <path class="hw" d="M56.8 971.8C94.2 941.1 217 844 281.3 787.5C345.5 731 386.8 691.7 442.4 632.7C498.1 573.7 557.6 504.9 615.1 433.7C672.7 362.4 732.2 277.6 787.8 205.1C843.5 132.6 922.1 33.1 949 -1.3"/>
+    <path class="hw" d="M684.2 1023.4C719.7 990.2 830 894.4 897.2 824.4C964.3 754.3 1024.8 678.1 1087.1 603.2C1149.5 528.3 1240.6 412.8 1271.3 374.7"/>
+  </g>
+  <g class="layer" data-kind="road">
+    <path class="rd" d="M-6.5 971.8C17.4 928.8 96.1 799.8 137.4 713.8C178.6 627.8 210.3 536.9 241 455.8C271.7 374.7 288.9 303.4 321.6 227.3C354.2 151.1 417.5 36.8 436.7 -1.3"/>
+    <path class="rd" d="M379.1 1067.6C404.1 1035.7 487.5 923.9 528.8 876C570 828 584.4 825.6 626.6 780.1C668.8 734.7 733.1 664.6 782.1 603.2C831 541.8 897.2 443.5 920.2 411.5"/>
+    <path class="rd" d="M-64.1 728.5C-20.9 732.2 111.5 742 194.9 750.6C278.4 759.2 359.9 771.5 436.7 780.1C513.4 788.7 584.4 796.1 655.4 802.2C726.4 808.4 828.1 814.5 862.6 817"/>
+    <path class="rd" d="M5 396.8C36.6 389.4 138.3 369.8 194.9 352.6C251.5 335.4 294.7 309.6 344.6 293.6C394.5 277.6 440.5 270.3 494.2 256.7C548 243.2 638.1 219.9 666.9 212.5"/>
+  </g>
+  <g class="layer" data-kind="rail">
+    <path class="rl" d="M442.4 1082.4C467.4 1045.5 550.8 921.4 592.1 861.2C633.4 801 647.7 782.6 690 721.1C732.2 659.7 797.4 561.4 845.4 492.6C893.3 423.8 955.7 339.1 977.8 308.3" data-dash="7 6"/>
+  </g>
+  <g class="layer" data-kind="labels">
+    <text x="372.4" y="292.4" text-anchor="middle" class="lb lb-campus">Johns Hopkins APL</text>
+    <text x="569.1" y="756.4" text-anchor="middle" class="lb lb-water">Patuxent River</text>
+    <text x="839.6" y="542.6" text-anchor="middle" class="lb lb-water">Little Patuxent River</text>
+    <text x="146.6" y="861.2" text-anchor="middle" class="lb lb-park">Fairland Park</text>
+    <text x="615.1" y="424.7" text-anchor="middle" class="lb">I-95</text>
+    <text x="241" y="446.8" text-anchor="middle" class="lb">US-29</text>
+    <text x="194.9" y="343.6" text-anchor="middle" class="lb">Johns Hopkins Rd</text>
+    <text x="690" y="712.1" text-anchor="middle" class="lb">MARC Camden Line</text>
+  </g>
+  <g class="layer" data-kind="marker">
+    <circle cx="390.6" cy="278.9" r="11" fill="none" stroke="rgba(52,87,213,.35)" stroke-width="1.5"/>
+    <circle cx="390.6" cy="278.9" r="4.5" fill="#3457D5"/>
+  </g>
+</svg>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of Hillsboro, Oregon">
+  <!-- INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access — data © OpenStreetMap contributors, ODbL -->
+  <style>
+  text{font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:rgba(255,255,255,.88);stroke-width:3px;letter-spacing:.02em}
+  .wa{fill:#E3ECF8;stroke:#C9D8EF;stroke-width:1.4}
+  .ww{fill:none;stroke:#BFD2ED;stroke-linecap:round;stroke-linejoin:round}
+  .pk{fill:#E5EFE1;stroke:#BFD6B8;stroke-width:1.6}
+  .cp{fill:#EEF0FA;stroke:#C3CAE4;stroke-width:1.8}
+  .hw{fill:none;stroke:#AEB6C2;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .rd{fill:none;stroke:#C9CFD8;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .r2{fill:none;stroke:#DADFE6;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .rl{fill:none;stroke:#C6CBD4;stroke-width:1.4}
+  .lb{font-size:12px;font-weight:500;fill:#98A0AB}
+  .lb-water{fill:#8CA0C6;font-style:italic}
+  .lb-park{fill:#85A07E}
+  .lb-campus{fill:#767E92;font-weight:600}
+  </style>
+  <g class="layer" data-kind="waterarea">
+  </g>
+  <g class="layer" data-kind="waterway">
+    <path class="ww" d="M-226 857.2C-180 875.7 -40 959.3 50 967.8C140 976.3 225 899.8 314 908.3C403 916.8 494 1011.8 584 1018.8C674 1025.9 768 945.1 854 950.8C940 956.5 1018 1045.8 1100 1052.9C1182 1060 1304.9 1003.3 1345.9 993.3" style="stroke-width:8"/>
+    <path class="ww" d="M854 40.7C845 74.7 816 179.6 800 244.8C784 310 778 368.2 758 432C738 495.7 706 566.6 680 627.6C654 688.5 615 769.3 602 797.7" style="stroke-width:4"/>
+  </g>
+  <g class="layer" data-kind="park">
+    <path class="pk" d="M158 644.6C186 621.9 277 637.5 308 661.6C339 685.7 355 752.3 344 789.2C333 826.1 276 881.3 242 882.8C208 884.2 154 837.4 140 797.7C126 758 130 667.3 158 644.6Z" data-fill="1"/>
+    <path class="pk" d="M650 457.5C668 446.1 721 436.2 740 449C759 461.7 773 512.8 764 534C755 555.3 708 579.4 686 576.6C664 573.7 638 536.9 632 517C626 497.2 632 468.8 650 457.5Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="campus">
+    <path class="cp" d="M362 253.3C385 237.7 458 236.3 482 253.3C506 270.3 516 329.9 506 355.4C496 380.9 449 407.9 422 406.4C395 405 354 372.4 344 346.9C334 321.4 339 268.9 362 253.3Z" data-fill="1"/>
+    <path class="cp" d="M518 295.9C540 283.1 603 280.3 626 295.9C649 311.5 666 365.3 656 389.4C646 413.5 593 443.3 566 440.5C539 437.6 502 396.5 494 372.4C486 348.3 496 308.6 518 295.9Z" data-fill="1"/>
+  </g>
+  <g class="layer" data-kind="highway">
+    <path class="hw" d="M-465.9 176.8C-405.9 188.1 -226 227.8 -106 244.8C14 261.8 134 264.7 254 278.9C374 293 495 305.8 614 329.9C733 354 856 388 968 423.4C1080 458.9 1233 522.7 1285.9 542.5"/>
+  </g>
+  <g class="layer" data-kind="road">
+    <path class="rd" d="M-465.9 517C-405.9 522.7 -231 529.8 -106 551C19 572.3 158 613.4 284 644.6C410 675.8 527 714.1 650 738.2C773 762.3 906 776.4 1022 789.2C1138 802 1291.9 810.5 1345.9 814.7"/>
+    <path class="rd" d="M-166 508.5C-111 498.6 54 468.8 164 449C274 429.1 384 406.4 494 389.4C604 372.4 715 341.2 824 346.9C933 352.6 1094 410.7 1148 423.4"/>
+    <path class="rd" d="M-28 568C-34 596.4 -51 674.4 -64 738.2C-77 802 -94 884.2 -106 950.8C-118 1017.4 -131 1106.7 -136 1137.9"/>
+    <path class="rd" d="M458 125.7C460 155.5 466 244.8 470 304.4C474 363.9 477 424.9 482 483C487 541.1 497 624.8 500 653.1"/>
+  </g>
+  <g class="layer" data-kind="rail">
+    <path class="rl" d="M-417.9 534C-360.9 528.4 -193 514.2 -76 500C41 485.8 164 463.1 284 449C404 434.8 523 414.9 644 414.9C765 414.9 894 432 1010 449C1126 466 1284.9 505.7 1339.9 517" data-dash="7 6"/>
+  </g>
+  <g class="layer" data-kind="labels">
+    <text x="423.2" y="323.1" text-anchor="middle" class="lb lb-campus">Intel Ronler Acres</text>
+    <text x="572" y="358.8" text-anchor="middle" class="lb lb-campus">Hillsboro Airport</text>
+    <text x="758" y="423" text-anchor="middle" class="lb lb-water">Rock Creek</text>
+    <text x="238.4" y="755.2" text-anchor="middle" class="lb lb-park">Jackson Bottom Wetlands</text>
+    <text x="694.4" y="506.8" text-anchor="middle" class="lb lb-park">Orenco Woods</text>
+    <text x="614" y="320.9" text-anchor="middle" class="lb">US-26 Sunset Hwy</text>
+    <text x="650" y="729.2" text-anchor="middle" class="lb">Tualatin Valley Hwy</text>
+    <text x="482" y="474" text-anchor="middle" class="lb">Brookwood Pkwy</text>
+  </g>
+  <g class="layer" data-kind="marker">
+    <circle cx="296" cy="491.5" r="11" fill="none" stroke="rgba(52,87,213,.35)" stroke-width="1.5"/>
+    <circle cx="296" cy="491.5" r="4.5" fill="#3457D5"/>
+  </g>
+</svg>
