@@ -496,6 +496,7 @@ function addP(x, y, z){ P.push(new THREE.Vector3(x, y, z)); PREV.push(new THREE.
   const topY = ANCHOR.y - (ROPE_N - 1) * SEG - 0.13;
   addP(-BW / 2, topY, 0.001); addP(BW / 2, topY, -0.001);          // TL TR
   addP(-BW / 2, topY - BH, 0.002); addP(BW / 2, topY - BH, 0);     // BL BR
+  addP(0, topY, 0);                                                // TC — single lanyard attach point
   PIN[0] = true;
   if (!reduced){                       // entry: badge drops in and settles
     for (let i = 1; i < P.length; i++){
@@ -503,11 +504,13 @@ function addP(x, y, z){ P.push(new THREE.Vector3(x, y, z)); PREV.push(new THREE.
     }
   }
 })();
-const iTL = ROPE_N, iTR = ROPE_N + 1, iBL = ROPE_N + 2, iBR = ROPE_N + 3;
+const iTL = ROPE_N, iTR = ROPE_N + 1, iBL = ROPE_N + 2, iBR = ROPE_N + 3, iTC = ROPE_N + 4;
 const CON = [];
 for (let i = 0; i < ROPE_N - 1; i++) CON.push([i, i + 1, SEG]);
-const strap = Math.hypot(BW / 2, 0.13);
-CON.push([ROPE_N - 1, iTL, strap], [ROPE_N - 1, iTR, strap]);
+const strap = 0.13;
+CON.push([ROPE_N - 1, iTC, strap]);                   // rope end → single top-center point
+const tcSide = BW / 2, tcDiag = Math.hypot(BW / 2, BH);
+CON.push([iTC, iTL, tcSide], [iTC, iTR, tcSide], [iTC, iBL, tcDiag], [iTC, iBR, tcDiag]);  // TC rigid to badge
 const diag = Math.hypot(BW, BH);
 CON.push([iTL, iTR, BW], [iBL, iBR, BW], [iTL, iBL, BH], [iTR, iBR, BH], [iTL, iBR, diag], [iTR, iBL, diag]);
 
@@ -563,8 +566,8 @@ const badgeMesh = new THREE.Mesh(badgeGeom, frontMat);
 const badgeBack = new THREE.Mesh(badgeGeom, backMat);
 scene.add(badgeMesh); scene.add(badgeBack);
 
-/* lanyard ribbon + the two short straps to the badge corners */
-const ribbonQuads = (ROPE_N - 1) + 2;
+/* lanyard ribbon + one short strap to the badge's top-center attach point */
+const ribbonQuads = (ROPE_N - 1) + 1;
 const ribbonGeom = new THREE.BufferGeometry();
 ribbonGeom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ribbonQuads * 4 * 3), 3));
 const rIdx = [];
@@ -601,8 +604,7 @@ function syncMeshes(){
   for (let i = 0; i < ROPE_N - 1; i++)
     setQuad(rp, i, P[i].x, P[i].y, P[i].z, P[i + 1].x, P[i + 1].y, P[i + 1].z, 0.045);
   const e = ROPE_N - 1;
-  setQuad(rp, e,     P[e].x, P[e].y, P[e].z, P[iTL].x + 0.07, P[iTL].y - 0.03, P[iTL].z, 0.028);
-  setQuad(rp, e + 1, P[e].x, P[e].y, P[e].z, P[iTR].x - 0.07, P[iTR].y - 0.03, P[iTR].z, 0.028);
+  setQuad(rp, e, P[e].x, P[e].y, P[e].z, P[iTC].x, P[iTC].y, P[iTC].z, 0.03);
   ribbonGeom.attributes.position.needsUpdate = true;
 }
 
