@@ -30,21 +30,39 @@ their strokes; leaving a section traces the old map back out while the new
 one traces up over it. The files preview standalone — open one in a browser
 to inspect it.
 
-To (re)generate the SVGs from real OpenStreetMap geometry, run from any
-machine with open internet access:
+To (re)generate the SVGs from **real OpenStreetMap geometry**, run from any
+machine with open internet access (Node 18+, no dependencies):
 
 ```
-node tools/fetch-maps.mjs             # all locations, via the Overpass API
+node tools/fetch-maps.mjs             # fetch + render all locations
 node tools/fetch-maps.mjs apl cmu     # just these ids
+node tools/fetch-maps.mjs --help      # all options
 ```
+
+The script has two halves — a **fetch** that hits the Overpass API and a
+**render** that draws the SVG — split so you only need the internet for the
+first. Every fetch caches its raw OSM response under `assets/maps/.cache/`:
+
+```
+node tools/fetch-maps.mjs --fetch-only    # download raw OSM → .cache/, no SVG
+node tools/fetch-maps.mjs --from-cache     # rebuild SVGs from .cache/, no network
+```
+
+Commit `assets/maps/.cache/*.json` alongside the SVGs and anyone — including
+CI or a network-blocked sandbox — can reproduce the exact maps with
+`--from-cache` and zero network access. Overpass is rate-limited and
+sometimes down, so the cache also means re-rendering never re-downloads.
+Several public Overpass mirrors are tried in turn; pin one with the
+`OVERPASS_URL` environment variable if a particular mirror serves you best.
 
 > The Claude Code sandbox this repo was built in blocks all OSM/Overpass
 > hosts, so the checked-in SVGs are interim ones built with
 > `node tools/fetch-maps.mjs --from-mapdata` (hand-traced approximations in
-> `mapdata.js`, © OpenStreetMap contributors, ODbL). Running the command
-> above on a normal machine replaces them with true OSM geometry — riverbank
-> polygons, real curve detail, secondary-road density — with no site changes
-> needed; the SVG contract stays the same.
+> `mapdata.js`, © OpenStreetMap contributors, ODbL). Running
+> `node tools/fetch-maps.mjs` on a normal machine replaces them with true OSM
+> geometry — riverbank/reservoir/wetland polygons, real curve detail,
+> secondary-road density — with no site changes needed; the SVG contract
+> stays the same.
 
 To add a location: add its entry to `LOCATIONS` in `tools/fetch-maps.mjs`
 (id must match the `content.js` entry), re-run the script, and the site
