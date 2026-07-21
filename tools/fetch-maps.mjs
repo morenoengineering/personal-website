@@ -1,17 +1,31 @@
 #!/usr/bin/env node
 /* =============================================================
-   Generate assets/maps/<id>.svg — one layered map per location.
+   Generate assets/maps/<id>.svg — one layered map per location,
+   from real OpenStreetMap geometry (via the Overpass API).
    =============================================================
-   Usage:
-     node tools/fetch-maps.mjs                 # real data via Overpass API
-     node tools/fetch-maps.mjs apl cmu         # only these locations
-     node tools/fetch-maps.mjs --from-mapdata  # offline: rebuild interim SVGs
-                                               # from the hand-traced mapdata.js
+   Two halves, split so the half that needs the internet is small
+   and the half that draws the SVG can run anywhere (even offline):
 
-   No dependencies (Node 18+, built-in fetch). Run the network mode
-   from a machine with open internet access — sandboxed environments
-   that block overpass-api.de can only use --from-mapdata.
-   Set OVERPASS_URL to use a different Overpass mirror.
+     FETCH   downloads raw OSM data for each location and caches it
+             under assets/maps/.cache/<id>.json
+     RENDER  turns cached (or freshly fetched) OSM data into the
+             layered SVG the site animates
+
+   Usage:
+     node tools/fetch-maps.mjs                 # fetch + render, all locations
+     node tools/fetch-maps.mjs apl cmu         # …only these ids
+     node tools/fetch-maps.mjs --fetch-only    # download raw OSM → .cache/, no SVG
+     node tools/fetch-maps.mjs --from-cache    # render from .cache/, no network
+     node tools/fetch-maps.mjs --from-mapdata  # render hand-traced sketches (last resort)
+     node tools/fetch-maps.mjs --help
+
+   Why the cache: Overpass is rate-limited and occasionally down, so
+   re-rendering shouldn't re-download. Commit assets/maps/.cache/*.json
+   and anyone (or any CI, or a network-blocked sandbox) can rebuild the
+   exact same SVGs with --from-cache and zero network access.
+
+   No dependencies (Node 18+, built-in fetch). Set OVERPASS_URL to pin a
+   single mirror; otherwise several public mirrors are tried in turn.
 
    Output SVG contract (what index.html relies on):
      - viewBox "0 0 1000 1000" covering `span` km, centered on the
@@ -28,24 +42,46 @@
    Data © OpenStreetMap contributors, ODbL (openstreetmap.org/copyright).
    ============================================================= */
 
-import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTDIR = join(ROOT, "assets", "maps");
-const OVERPASS = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
-const FROM_MAPDATA = process.argv.includes("--from-mapdata");
-const ONLY = process.argv.slice(2).filter(a => !a.startsWith("--"));
+const CACHEDIR = join(OUTDIR, ".cache");
+
+/* Overpass mirrors, tried in order until one answers. Pin one with
+   OVERPASS_URL if a particular mirror works best for you. */
+const MIRRORS = process.env.OVERPASS_URL
+  ? [process.env.OVERPASS_URL]
+  : [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.osm.ch/api/interpreter",
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    ];
+
+const ARGS = process.argv.slice(2);
+if (ARGS.includes("--help") || ARGS.includes("-h")){
+  process.stdout.write(readFileSync(fileURLToPath(import.meta.url), "utf8")
+    .split("Usage:")[1].split("*/")[0].replace(/^\s+/, "   Usage:\n     "));
+  process.exit(0);
+}
+const FROM_MAPDATA = ARGS.includes("--from-mapdata");
+const FROM_CACHE   = ARGS.includes("--from-cache");
+const FETCH_ONLY   = ARGS.includes("--fetch-only");
+const ONLY = ARGS.filter(a => !a.startsWith("--"));
 
 const VB = 1000;                       // viewBox size; 1000 units == `span` km
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const hostOf = u => { try { return new URL(u).host; } catch { return u; } };
 
 const LOCATIONS = [
-  { id: "apl",      place: "Laurel, Maryland",        center: [39.138, -76.878],  span: 15, site: [39.168, -76.897] },
-  { id: "intel",    place: "Hillsboro, Oregon",       center: [45.522, -122.955], span: 13, site: [45.523, -122.989] },
-  { id: "ge",       place: "Niskayuna, New York",     center: [42.789, -73.862],  span: 13, site: [42.779, -73.849] },
+  { id: "apl",      place: "Laurel, Maryland",         center: [39.138, -76.878], span: 15, site: [39.168, -76.897] },
+  { id: "intel",    place: "Hillsboro, Oregon",        center: [45.522, -122.955], span: 13, site: [45.523, -122.989] },
+  { id: "ge",       place: "Niskayuna, New York",      center: [42.789, -73.862], span: 13, site: [42.779, -73.849] },
   { id: "cmu",      place: "Pittsburgh, Pennsylvania", center: [40.443, -79.952], span: 12, site: [40.443, -79.943] },
-  { id: "richmond", place: "Richmond, Virginia",      center: [37.545, -77.470],  span: 15, site: [37.541, -77.434] }
+  { id: "richmond", place: "Richmond, Virginia",       center: [37.545, -77.470], span: 15, site: [37.541, -77.434] }
 ];
 
 /* ---------------- geometry ---------------- */
@@ -228,7 +264,7 @@ function emitSvg(loc, features, provenance){
   return lines.join("\n") + "\n";
 }
 
-/* ---------------- mode 1: offline, from mapdata.js ---------------- */
+/* ---------------- mode: offline, from mapdata.js ---------------- */
 function fromMapdata(loc){
   const src = readFileSync(join(ROOT, "mapdata.js"), "utf8");
   const MAPDATA = new Function(src + "; return MAPDATA;")();
@@ -253,7 +289,7 @@ function fromMapdata(loc){
   return out;
 }
 
-/* ---------------- mode 2: live, from Overpass ---------------- */
+/* ---------------- Overpass fetch + cache ---------------- */
 function bboxOf(loc){
   const [lat, lng] = loc.center;
   const dLat = loc.span / 2 / kmLat * 1.30;
@@ -265,9 +301,14 @@ const QUERY = b => `[out:json][timeout:120];
 (
   way[natural=water](${b});
   relation[natural=water](${b});
+  way[waterway=riverbank](${b});
+  way[landuse=reservoir](${b});
+  relation[landuse=reservoir](${b});
   way[waterway~"^(river|canal|stream)$"](${b});
   way[leisure~"^(park|nature_reserve|golf_course)$"](${b});
   relation[leisure~"^(park|nature_reserve)$"](${b});
+  way[natural=wetland](${b});
+  relation[natural=wetland](${b});
   way[amenity~"^(university|college|research_institute)$"][name](${b});
   relation[amenity~"^(university|college|research_institute)$"][name](${b});
   way[aeroway=aerodrome][name](${b});
@@ -277,26 +318,60 @@ const QUERY = b => `[out:json][timeout:120];
 );
 out tags geom;`;
 
+/* Try each mirror in turn; retry a mirror on 429/504, then move on. */
 async function overpass(query){
   if (process.env.OVERPASS_FIXTURE)    // offline test hook: canned response file
     return JSON.parse(readFileSync(process.env.OVERPASS_FIXTURE, "utf8")).elements || [];
-  for (let attempt = 0; ; attempt++){
-    const res = await fetch(OVERPASS, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "data=" + encodeURIComponent(query)
-    });
-    if (res.ok) return (await res.json()).elements || [];
-    if ((res.status === 429 || res.status === 504) && attempt < 3){
-      const wait = 15000 * (attempt + 1);
-      process.stderr.write(`  overpass ${res.status}, retrying in ${wait / 1000}s…\n`);
-      await new Promise(r => setTimeout(r, wait));
-      continue;
+  let lastErr;
+  for (const url of MIRRORS){
+    for (let attempt = 0; attempt < 3; attempt++){
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "data=" + encodeURIComponent(query)
+        });
+        if (res.ok) return (await res.json()).elements || [];
+        if ((res.status === 429 || res.status === 504) && attempt < 2){
+          const wait = 12000 * (attempt + 1);
+          process.stderr.write(`  ${hostOf(url)} ${res.status}, retrying in ${wait / 1000}s…\n`);
+          await sleep(wait);
+          continue;
+        }
+        lastErr = new Error(`${hostOf(url)} → HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        break;                          // non-retryable: next mirror
+      } catch (e){
+        lastErr = e;
+        process.stderr.write(`  ${hostOf(url)} unreachable (${e.code || e.message}); trying next mirror…\n`);
+        break;                          // network error: next mirror
+      }
     }
-    throw new Error(`Overpass ${res.status}: ${(await res.text()).slice(0, 300)}`);
   }
+  throw lastErr || new Error("all Overpass mirrors failed");
 }
 
+function cachePath(id){ return join(CACHEDIR, id + ".json"); }
+
+async function fetchElements(loc){
+  const elements = await overpass(QUERY(bboxOf(loc)));
+  mkdirSync(CACHEDIR, { recursive: true });
+  writeFileSync(cachePath(loc.id), JSON.stringify({
+    generated: new Date().toISOString(),
+    place: loc.place,
+    bbox: bboxOf(loc),
+    elements
+  }) + "\n");
+  return elements;
+}
+
+function cachedElements(loc){
+  const p = cachePath(loc.id);
+  if (!existsSync(p))
+    throw new Error(`no cached OSM data for "${loc.id}" (${p}). Run a fetch first: node tools/fetch-maps.mjs ${loc.id}`);
+  return JSON.parse(readFileSync(p, "utf8")).elements || [];
+}
+
+/* ---------------- OSM elements → SVG features ---------------- */
 /* relation → outer rings (member line fragments stitched closed) */
 function relationRings(el, proj){
   const segs = (el.members || [])
@@ -308,8 +383,9 @@ function relationRings(el, proj){
 }
 
 function classify(tags){
-  if (tags.natural === "water" || tags.waterway === "riverbank") return "waterarea";
+  if (tags.natural === "water" || tags.waterway === "riverbank" || tags.landuse === "reservoir") return "waterarea";
   if (tags.waterway) return "waterway";
+  if (tags.natural === "wetland") return "park";
   if (tags.leisure) return "park";
   if (tags.amenity || tags.aeroway || tags.landuse) return "campus";
   if (tags.railway) return "rail";
@@ -318,10 +394,9 @@ function classify(tags){
   return null;
 }
 
-async function fromOverpass(loc){
+function featuresFromElements(loc, elements){
   const kmU = VB / loc.span;                          // units per km
   const proj = projector(loc);
-  const elements = await overpass(QUERY(bboxOf(loc)));
   process.stderr.write(`  ${elements.length} raw elements\n`);
 
   const areas = [];        // {kind, name, ring}
@@ -418,15 +493,38 @@ if (!todo.length){
   console.error("No matching locations. Ids: " + LOCATIONS.map(l => l.id).join(", "));
   process.exit(1);
 }
+if (!FROM_MAPDATA && !FROM_CACHE)
+  process.stderr.write(`Overpass mirrors: ${MIRRORS.map(hostOf).join(", ")}\n`);
+
+let networked = 0;
 for (const loc of todo){
   process.stderr.write(`${loc.place} …\n`);
-  const features = FROM_MAPDATA ? fromMapdata(loc) : await fromOverpass(loc);
-  const provenance = FROM_MAPDATA
-    ? "INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access"
-    : "Generated from the Overpass API on " + new Date().toISOString().slice(0, 10);
+
+  let features, provenance;
+  if (FROM_MAPDATA){
+    features = fromMapdata(loc);
+    provenance = "INTERIM: generated from hand-traced mapdata.js; replace by running tools/fetch-maps.mjs with network access";
+  } else if (FROM_CACHE){
+    features = featuresFromElements(loc, cachedElements(loc));
+    provenance = "Rendered from cached Overpass data in assets/maps/.cache/" + loc.id + ".json";
+  } else {
+    const elements = await fetchElements(loc);
+    networked++;
+    process.stderr.write(`  cached → assets/maps/.cache/${loc.id}.json\n`);
+    if (FETCH_ONLY) continue;           // download only, render later with --from-cache
+    features = featuresFromElements(loc, elements);
+    provenance = "Generated from the Overpass API on " + new Date().toISOString().slice(0, 10);
+  }
+
   const svg = emitSvg(loc, features, provenance);
   const file = join(OUTDIR, loc.id + ".svg");
   writeFileSync(file, svg);
   process.stderr.write(`  wrote ${file} (${(svg.length / 1024).toFixed(1)} kB, ${features.length} features)\n`);
-  if (!FROM_MAPDATA) await new Promise(r => setTimeout(r, 3000));   // be polite to Overpass
+
+  /* be polite to Overpass between live fetches */
+  if (!FROM_MAPDATA && !FROM_CACHE && loc !== todo[todo.length - 1]) await sleep(3000);
 }
+
+if (FETCH_ONLY)
+  process.stderr.write(`\nFetched ${networked} location(s) to assets/maps/.cache/. ` +
+    `Render them anywhere with: node tools/fetch-maps.mjs --from-cache\n`);
