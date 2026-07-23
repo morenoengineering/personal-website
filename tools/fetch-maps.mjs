@@ -328,7 +328,10 @@ async function overpass(query){
       try {
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "personal-website-map-generator/1.0 (https://github.com/morenoengineering/personal-website)"
+          },
           body: "data=" + encodeURIComponent(query)
         });
         if (res.ok) return (await res.json()).elements || [];
